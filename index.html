@@ -177,11 +177,7 @@
     .stage{gap:16px}
   }
 
-  @media (prefers-reduced-motion:reduce){
-    .stage.is-drawing .plate,.stage.is-drawing .nib{animation:none}
-    .index li{animation:none;opacity:1;transform:none}
-    .plate.pending{opacity:1}
-  }
+  /* reduced-motion override removed — the draw-on reveal always plays */
   .filter{width:100%;font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:8px 11px;margin:0;outline:none;-webkit-appearance:none}
   .filter:focus{border-color:var(--accent)}
   .filter::placeholder{color:var(--faint)}
@@ -335,7 +331,7 @@
   var DEFAULT = "sydney";
 
   var pad = function(n){return (n<10?"0":"")+n;};
-  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+  var reduce = false; /* always play the draw-on reveal, regardless of the OS motion setting */
 
   var indexEl = document.getElementById("index");
   var stage   = document.getElementById("stage");
