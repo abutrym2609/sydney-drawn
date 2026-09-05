@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Greater Sydney, drawn</title>
-<meta name="description" content="Twenty-four Sydney neighbourhoods, drawn by hand. Pick a suburb and watch it drawn.">
+<meta name="description" content="106 Sydney neighbourhoods, drawn by hand. Pick a suburb and watch it drawn.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f6f4ef'/%3E%3Ctext x='16' y='24' font-family='Georgia,serif' font-size='24' text-anchor='middle' fill='%23c0442e'%3ES%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,7 +45,7 @@
     height:100vh;position:sticky;top:0;overflow:hidden;
     background:linear-gradient(180deg,var(--paper-2),var(--paper));
   }
-  .brand,.rule,.idx-head,.rail-foot{flex:0 0 auto}
+  .brand,.rule,.idx-head,.rail-foot,.filter{flex:0 0 auto}
   .brand{display:flex;flex-direction:column;gap:12px}
   .wordmark{
     font-family:var(--serif);font-weight:300;line-height:.94;
@@ -182,6 +182,9 @@
     .index li{animation:none;opacity:1;transform:none}
     .plate.pending{opacity:1}
   }
+  .filter{width:100%;font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--paper-2);border:1px solid var(--line);border-radius:8px;padding:8px 11px;margin:0;outline:none;-webkit-appearance:none}
+  .filter:focus{border-color:var(--accent)}
+  .filter::placeholder{color:var(--faint)}
 </style>
 </head>
 <body>
@@ -189,10 +192,11 @@
   <aside class="rail">
     <div class="brand">
       <h1 class="wordmark">Greater Sydney,<br><em>drawn<span class="dot">.</span></em></h1>
-      <p class="tagline">Twenty-four neighbourhoods, drawn by hand. Choose one and watch it drawn.</p>
+      <p class="tagline">106 neighbourhoods, drawn by hand. Choose one and watch it drawn.</p>
     </div>
     <hr class="rule">
     <div class="idx-head"><span>The Index</span><span id="idxTotal">24</span></div>
+    <input id="filter" class="filter" type="search" placeholder="Search suburbs…" autocomplete="off" aria-label="Search suburbs">
     <ul class="index" id="index" role="list"></ul>
     <!-- Footer credit — edit freely -->
     <div class="rail-foot">
@@ -221,30 +225,112 @@
 (function(){
   "use strict";
   var SUBURBS = [
-    {s:"annandale",       n:"Annandale"},
-    {s:"ashfield",        n:"Ashfield"},
-    {s:"barangaroo",      n:"Barangaroo"},
-    {s:"camperdown",      n:"Camperdown"},
-    {s:"chippendale",     n:"Chippendale"},
-    {s:"darlinghurst",    n:"Darlinghurst"},
-    {s:"dawes-point",     n:"Dawes Point"},
-    {s:"elizabeth-bay",   n:"Elizabeth Bay"},
-    {s:"forest-lodge",    n:"Forest Lodge"},
-    {s:"glebe",           n:"Glebe"},
-    {s:"haymarket",       n:"Haymarket"},
-    {s:"millers-point",   n:"Millers Point"},
-    {s:"moore-park",      n:"Moore Park"},
-    {s:"newtown",         n:"Newtown"},
-    {s:"paddington",      n:"Paddington"},
-    {s:"potts-point",     n:"Potts Point"},
-    {s:"pyrmont",         n:"Pyrmont"},
-    {s:"redfern",         n:"Redfern"},
+    {s:"abbotsford", n:"Abbotsford"},
+    {s:"airds", n:"Airds"},
+    {s:"annandale", n:"Annandale"},
+    {s:"artarmon", n:"Artarmon"},
+    {s:"ashfield", n:"Ashfield"},
+    {s:"auburn", n:"Auburn"},
+    {s:"avalon-beach", n:"Avalon Beach"},
+    {s:"badgerys-creek", n:"Badgerys Creek"},
+    {s:"balmain", n:"Balmain"},
+    {s:"balmain-east", n:"Balmain East"},
+    {s:"bankstown", n:"Bankstown"},
+    {s:"barangaroo", n:"Barangaroo"},
+    {s:"bellevue-hill", n:"Bellevue Hill"},
+    {s:"berowra-waters", n:"Berowra Waters"},
+    {s:"birchgrove", n:"Birchgrove"},
+    {s:"blacktown", n:"Blacktown"},
+    {s:"bondi", n:"Bondi"},
+    {s:"bondi-beach", n:"Bondi Beach"},
+    {s:"bondi-junction", n:"Bondi Junction"},
+    {s:"breakfast-point", n:"Breakfast Point"},
+    {s:"bronte", n:"Bronte"},
+    {s:"burwood", n:"Burwood"},
+    {s:"cabarita", n:"Cabarita"},
+    {s:"cammeray", n:"Cammeray"},
+    {s:"camperdown", n:"Camperdown"},
+    {s:"canada-bay", n:"Canada Bay"},
+    {s:"castle-cove", n:"Castle Cove"},
+    {s:"castlecrag", n:"Castlecrag"},
+    {s:"chatswood", n:"Chatswood"},
+    {s:"chippendale", n:"Chippendale"},
+    {s:"chiswick", n:"Chiswick"},
+    {s:"clovelly", n:"Clovelly"},
+    {s:"concord", n:"Concord"},
+    {s:"concord-west", n:"Concord West"},
+    {s:"coogee", n:"Coogee"},
+    {s:"cremorne", n:"Cremorne"},
+    {s:"cremorne-point", n:"Cremorne Point"},
+    {s:"crows-nest", n:"Crows Nest"},
+    {s:"croydon", n:"Croydon"},
+    {s:"croydon-park", n:"Croydon Park"},
+    {s:"darling-point", n:"Darling Point"},
+    {s:"darlinghurst", n:"Darlinghurst"},
+    {s:"dawes-point", n:"Dawes Point"},
+    {s:"double-bay", n:"Double Bay"},
+    {s:"dover-heights", n:"Dover Heights"},
+    {s:"drummoyne", n:"Drummoyne"},
+    {s:"dulwich-hill", n:"Dulwich Hill"},
+    {s:"edgecliff", n:"Edgecliff"},
+    {s:"elizabeth-bay", n:"Elizabeth Bay"},
+    {s:"enmore", n:"Enmore"},
+    {s:"five-dock", n:"Five Dock"},
+    {s:"forest-lodge", n:"Forest Lodge"},
+    {s:"glebe", n:"Glebe"},
+    {s:"greenwich", n:"Greenwich"},
+    {s:"haberfield", n:"Haberfield"},
+    {s:"haymarket", n:"Haymarket"},
+    {s:"kensington", n:"Kensington"},
+    {s:"kirribilli", n:"Kirribilli"},
+    {s:"kurraba-point", n:"Kurraba Point"},
+    {s:"lane-cove", n:"Lane Cove"},
+    {s:"lavender-bay", n:"Lavender Bay"},
+    {s:"leichhardt", n:"Leichhardt"},
+    {s:"linley-point", n:"Linley Point"},
+    {s:"longueville", n:"Longueville"},
+    {s:"manly", n:"Manly"},
+    {s:"maroubra", n:"Maroubra"},
+    {s:"marrickville", n:"Marrickville"},
+    {s:"mcmahons-point", n:"McMahons Point"},
+    {s:"middle-cove", n:"Middle Cove"},
+    {s:"millers-point", n:"Millers Point"},
+    {s:"milsons-point", n:"Milsons Point"},
+    {s:"moore-park", n:"Moore Park"},
+    {s:"mosman", n:"Mosman"},
+    {s:"naremburn", n:"Naremburn"},
+    {s:"neutral-bay", n:"Neutral Bay"},
+    {s:"newtown", n:"Newtown"},
+    {s:"north-sydney", n:"North Sydney"},
+    {s:"north-willoughby", n:"North Willoughby"},
+    {s:"northbridge", n:"Northbridge"},
+    {s:"paddington", n:"Paddington"},
+    {s:"parramatta", n:"Parramatta"},
+    {s:"petersham", n:"Petersham"},
+    {s:"point-piper", n:"Point Piper"},
+    {s:"potts-point", n:"Potts Point"},
+    {s:"pyrmont", n:"Pyrmont"},
+    {s:"queens-park", n:"Queens Park"},
+    {s:"randwick", n:"Randwick"},
+    {s:"redfern", n:"Redfern"},
+    {s:"riverview", n:"Riverview"},
+    {s:"rose-bay", n:"Rose Bay"},
     {s:"rushcutters-bay", n:"Rushcutters Bay"},
-    {s:"sydney",          n:"Sydney"},
-    {s:"the-rocks",       n:"The Rocks"},
-    {s:"ultimo",          n:"Ultimo"},
-    {s:"waterloo",        n:"Waterloo"},
-    {s:"woolloomooloo",   n:"Woolloomooloo"}
+    {s:"st-leonards", n:"St Leonards"},
+    {s:"stanmore", n:"Stanmore"},
+    {s:"surry-hills", n:"Surry Hills"},
+    {s:"sydney", n:"Sydney"},
+    {s:"tamarama", n:"Tamarama"},
+    {s:"the-rocks", n:"The Rocks"},
+    {s:"ultimo", n:"Ultimo"},
+    {s:"vaucluse", n:"Vaucluse"},
+    {s:"waterloo", n:"Waterloo"},
+    {s:"waverton", n:"Waverton"},
+    {s:"willoughby", n:"Willoughby"},
+    {s:"willoughby-east", n:"Willoughby East"},
+    {s:"wollstonecraft", n:"Wollstonecraft"},
+    {s:"woolloomooloo", n:"Woolloomooloo"},
+    {s:"woolwich", n:"Woolwich"}
   ];
   var DEFAULT = "sydney";
 
@@ -325,6 +411,16 @@
     if(k==="ArrowDown"||k==="ArrowRight"){ e.preventDefault(); select((current+1)%SUBURBS.length); }
     else if(k==="ArrowUp"||k==="ArrowLeft"){ e.preventDefault(); select((current-1+SUBURBS.length)%SUBURBS.length); }
   });
+
+  var filterEl = document.getElementById("filter");
+  if(filterEl){
+    filterEl.addEventListener("input", function(){
+      var q = filterEl.value.trim().toLowerCase();
+      buttons.forEach(function(b,j){
+        b.parentNode.hidden = !!q && SUBURBS[j].n.toLowerCase().indexOf(q) === -1;
+      });
+    });
+  }
 
   var start = SUBURBS.findIndex(function(x){return x.s===DEFAULT;});
   select(start<0?0:start);
