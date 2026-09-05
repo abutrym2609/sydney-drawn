@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Greater Sydney, drawn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FFFFFF;
+    --ink:#262522;
+    --graphite:#6E6C66;
+    --rule:#DCD9D0;
+    --thread:#D2342A;
+    --hover:#F1EFE7;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;font-size:15px;line-height:1.45}
+  body{min-height:100vh}
+
+  .page{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+  @media (max-width:860px){.page{grid-template-columns:1fr}}
+
+  /* index column */
+  .index{border-right:1px solid var(--rule);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+  @media (max-width:860px){.index{height:auto;position:static;border-right:0;border-bottom:1px solid var(--rule)}}
+  .masthead{padding:28px 24px 18px}
+  .masthead h1{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:30px;line-height:1.05;margin:0 0 10px;letter-spacing:-.01em}
+  .masthead p{margin:0;color:var(--graphite);font-size:14px;max-width:22ch}
+  .search{margin:0 24px 8px;position:relative}
+  .search input{width:100%;border:0;border-bottom:1px solid var(--ink);background:transparent;padding:8px 0;font:inherit;font-size:15px;color:var(--ink);outline:none}
+  .search input::placeholder{color:var(--graphite)}
+  .search input:focus-visible{border-bottom-width:2px}
+  .list{overflow:auto;padding:6px 0 24px;flex:1;scrollbar-width:thin}
+  @media (max-width:860px){.list{max-height:34vh}}
+  .region{padding:14px 24px 4px;color:var(--graphite);font-size:12.5px;font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:15px}
+  .list button{display:block;width:100%;text-align:left;border:0;background:none;font:inherit;font-size:15px;color:var(--ink);padding:5px 24px;cursor:pointer;border-radius:0}
+  .list button:hover{background:var(--hover)}
+  .list button:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+  .list button.on{background:var(--ink);color:var(--paper)}
+  .list button .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--thread);margin-left:8px;vertical-align:middle;opacity:0}
+  .list button.has-art .dot{opacity:1}
+  .empty{padding:18px 24px;color:var(--graphite)}
+
+  /* studio */
+  .studio{padding:36px 40px 48px;display:flex;flex-direction:column;gap:14px;min-width:0}
+  @media (max-width:860px){.studio{padding:20px 16px 32px}}
+  .sheet{position:relative;width:100%;aspect-ratio:1939/811;background:var(--paper)}
+  .sheet canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .prompt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;pointer-events:none;transition:opacity .4s}
+  .prompt.hide{opacity:0}
+  .prompt span{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(22px,3.4vw,44px);color:var(--graphite);max-width:20ch;line-height:1.1}
+
+  /* red thread progress */
+  .thread{height:14px;width:100%}
+  .thread svg{width:100%;height:14px;display:block;overflow:visible}
+  .thread .stitch{stroke:var(--thread);stroke-width:2;fill:none;stroke-dasharray:11 7;stroke-linecap:round}
+  .thread .knot{fill:var(--thread);opacity:0;transition:opacity .3s}
+
+  .foot{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:baseline;justify-content:space-between;color:var(--graphite);font-size:14px;min-height:22px}
+  .foot .stage{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:17px;color:var(--ink)}
+  .foot .stage:empty{display:none}
+  .actions{display:flex;gap:18px}
+  .actions button{border:0;background:none;font:inherit;font-size:14px;color:var(--ink);padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--rule)}
+  .actions button:hover{text-decoration-color:var(--ink)}
+  .actions button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  .actions[hidden]{display:none}
+  .note{color:var(--graphite);font-size:13px}
+
+  @media (prefers-reduced-motion:reduce){.prompt{transition:none}}
+</style>
+</head>
+<body>
+<div class="page">
+  <aside class="index">
+    <div class="masthead">
+      <h1>Greater Sydney,<br>drawn.</h1>
+      <p>Pick a suburb and watch its portrait appear, line by line.</p>
+    </div>
+    <div class="search"><input id="q" type="search" placeholder="Find a suburb" autocomplete="off" aria-label="Find a suburb"></div>
+    <nav class="list" id="list" aria-label="Suburbs"></nav>
+  </aside>
+
+  <main class="studio">
+    <div class="sheet" id="sheet">
+      <canvas id="cv" aria-label="Suburb illustration"></canvas>
+      <div class="prompt" id="prompt"><span>Choose a suburb from the index.</span></div>
+    </div>
+    <div class="thread" aria-hidden="true">
+      <svg viewBox="0 0 1000 14" preserveAspectRatio="none">
+        <path id="stitch" class="stitch" d="M0 7 L0 7"/>
+        <circle id="knot" class="knot" cx="0" cy="7" r="3.5"/>
+      </svg>
+    </div>
+    <div class="foot">
+      <div class="stage" id="stage" aria-live="polite"></div>
+      <div class="actions" id="actions" hidden>
+        <button id="again">Draw it again</button>
+        <button id="save">Save as PNG</button>
+      </div>
+      <div class="note" id="note"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ---------- data ---------- */
+const REGIONS = {
+  "Inner city": ["Sydney","The Rocks","Barangaroo","Millers Point","Dawes Point","Haymarket","Surry Hills","Darlinghurst","Paddington","Chippendale","Ultimo","Pyrmont","Glebe","Redfern","Waterloo","Woolloomooloo","Potts Point","Elizabeth Bay","Rushcutters Bay","Moore Park"],
+  "Eastern suburbs": ["Bondi","Bondi Beach","Bondi Junction","Bronte","Tamarama","Clovelly","Coogee","Maroubra","Randwick","Kensington","Queens Park","Edgecliff","Darling Point","Double Bay","Point Piper","Bellevue Hill","Rose Bay","Vaucluse","Dover Heights"],
+  "Inner west": ["Balmain","Balmain East","Birchgrove","Annandale","Leichhardt","Forest Lodge","Camperdown","Newtown","Enmore","Stanmore","Petersham","Marrickville","Dulwich Hill","Ashfield","Haberfield","Croydon","Croydon Park","Burwood","Concord","Concord West","Five Dock","Drummoyne","Abbotsford","Chiswick","Cabarita","Canada Bay","Breakfast Point"],
+  "Lower north shore": ["Kirribilli","Milsons Point","McMahons Point","Lavender Bay","North Sydney","Waverton","Wollstonecraft","Crows Nest","St Leonards","Neutral Bay","Kurraba Point","Cremorne","Cremorne Point","Cammeray","Mosman","Naremburn","Northbridge","Willoughby","Willoughby East","North Willoughby","Castlecrag","Castle Cove","Middle Cove","Artarmon","Chatswood","Lane Cove","Greenwich","Riverview","Longueville","Linley Point","Woolwich"],
+  "Northern beaches & north": ["Manly","Avalon Beach","Berowra Waters"],
+  "Western Sydney": ["Parramatta","Auburn","Blacktown","Badgerys Creek"],
+  "South & south-west": ["Bankstown","Airds"],
+};
+
+/* Illustration assets: one external WebP per suburb (small file, real art on the live site). */
+const ART = {
+  "Abbotsford": "img/abbotsford.webp",
+  "Airds": "img/airds.webp",
+  "Annandale": "img/annandale.webp",
+  "Artarmon": "img/artarmon.webp",
+  "Ashfield": "img/ashfield.webp",
+  "Auburn": "img/auburn.webp",
+  "Avalon Beach": "img/avalon-beach.webp",
+  "Badgerys Creek": "img/badgerys-creek.webp",
+  "Balmain": "img/balmain.webp",
+  "Balmain East": "img/balmain-east.webp",
+  "Bankstown": "img/bankstown.webp",
+  "Barangaroo": "img/barangaroo.webp",
+  "Bellevue Hill": "img/bellevue-hill.webp",
+  "Berowra Waters": "img/berowra-waters.webp",
+  "Birchgrove": "img/birchgrove.webp",
+  "Blacktown": "img/blacktown.webp",
+  "Bondi": "img/bondi.webp",
+  "Bondi Beach": "img/bondi-beach.webp",
+  "Bondi Junction": "img/bondi-junction.webp",
+  "Breakfast Point": "img/breakfast-point.webp",
+  "Bronte": "img/bronte.webp",
+  "Burwood": "img/burwood.webp",
+  "Cabarita": "img/cabarita.webp",
+  "Cammeray": "img/cammeray.webp",
+  "Camperdown": "img/camperdown.webp",
+  "Canada Bay": "img/canada-bay.webp",
+  "Castle Cove": "img/castle-cove.webp",
+  "Castlecrag": "img/castlecrag.webp",
+  "Chatswood": "img/chatswood.webp",
+  "Chippendale": "img/chippendale.webp",
+  "Chiswick": "img/chiswick.webp",
+  "Clovelly": "img/clovelly.webp",
+  "Concord": "img/concord.webp",
+  "Concord West": "img/concord-west.webp",
+  "Coogee": "img/coogee.webp",
+  "Cremorne": "img/cremorne.webp",
+  "Cremorne Point": "img/cremorne-point.webp",
+  "Crows Nest": "img/crows-nest.webp",
+  "Croydon": "img/croydon.webp",
+  "Croydon Park": "img/croydon-park.webp",
+  "Darling Point": "img/darling-point.webp",
+  "Darlinghurst": "img/darlinghurst.webp",
+  "Dawes Point": "img/dawes-point.webp",
+  "Double Bay": "img/double-bay.webp",
+  "Dover Heights": "img/dover-heights.webp",
+  "Drummoyne": "img/drummoyne.webp",
+  "Dulwich Hill": "img/dulwich-hill.webp",
+  "Edgecliff": "img/edgecliff.webp",
+  "Elizabeth Bay": "img/elizabeth-bay.webp",
+  "Enmore": "img/enmore.webp",
+  "Five Dock": "img/five-dock.webp",
+  "Forest Lodge": "img/forest-lodge.webp",
+  "Glebe": "img/glebe.webp",
+  "Greenwich": "img/greenwich.webp",
+  "Haberfield": "img/haberfield.webp",
+  "Haymarket": "img/haymarket.webp",
+  "Kensington": "img/kensington.webp",
+  "Kirribilli": "img/kirribilli.webp",
+  "Kurraba Point": "img/kurraba-point.webp",
+  "Lane Cove": "img/lane-cove.webp",
+  "Lavender Bay": "img/lavender-bay.webp",
+  "Leichhardt": "img/leichhardt.webp",
+  "Linley Point": "img/linley-point.webp",
+  "Longueville": "img/longueville.webp",
+  "Manly": "img/manly.webp",
+  "Maroubra": "img/maroubra.webp",
+  "Marrickville": "img/marrickville.webp",
+  "McMahons Point": "img/mcmahons-point.webp",
+  "Middle Cove": "img/middle-cove.webp",
+  "Millers Point": "img/millers-point.webp",
+  "Milsons Point": "img/milsons-point.webp",
+  "Moore Park": "img/moore-park.webp",
+  "Mosman": "img/mosman.webp",
+  "Naremburn": "img/naremburn.webp",
+  "Neutral Bay": "img/neutral-bay.webp",
+  "Newtown": "img/newtown.webp",
+  "North Sydney": "img/north-sydney.webp",
+  "North Willoughby": "img/north-willoughby.webp",
+  "Northbridge": "img/northbridge.webp",
+  "Paddington": "img/paddington.webp",
+  "Parramatta": "img/parramatta.webp",
+  "Petersham": "img/petersham.webp",
+  "Point Piper": "img/point-piper.webp",
+  "Potts Point": "img/potts-point.webp",
+  "Pyrmont": "img/pyrmont.webp",
+  "Queens Park": "img/queens-park.webp",
+  "Randwick": "img/randwick.webp",
+  "Redfern": "img/redfern.webp",
+  "Riverview": "img/riverview.webp",
+  "Rose Bay": "img/rose-bay.webp",
+  "Rushcutters Bay": "img/rushcutters-bay.webp",
+  "St Leonards": "img/st-leonards.webp",
+  "Stanmore": "img/stanmore.webp",
+  "Surry Hills": "img/surry-hills.webp",
+  "Sydney": "img/sydney.webp",
+  "Tamarama": "img/tamarama.webp",
+  "The Rocks": "img/the-rocks.webp",
+  "Ultimo": "img/ultimo.webp",
+  "Vaucluse": "img/vaucluse.webp",
+  "Waterloo": "img/waterloo.webp",
+  "Waverton": "img/waverton.webp",
+  "Willoughby": "img/willoughby.webp",
+  "Willoughby East": "img/willoughby-east.webp",
+  "Wollstonecraft": "img/wollstonecraft.webp",
+  "Woolloomooloo": "img/woolloomooloo.webp",
+  "Woolwich": "img/woolwich.webp",
+};
+
+const DEMO = "Sydney";
+
+
+/* The slip: on the rough sketch the artist draws something that simply cannot exist in Sydney,
+   on the blank paper right next to the drawing, then rubs it out. x, y in fractions of the artwork; size as a fraction of its width. */
+const GAG = {
+  "Surry Hills":   {x:0.95, y:1.0,  wrong:"eiffel"},
+  "Barangaroo":    {x:0.90, y:0.16, wrong:"pyramid"},
+  "Camperdown":    {x:0.08, y:0.86, wrong:"igloo"},
+  "Chippendale":   {x:0.88, y:0.80, wrong:"snowman"},
+  "Darlinghurst":  {x:0.90, y:0.86, wrong:"camel"},
+  "Dawes Point":   {x:0.50, y:0.09, wrong:"cactus"},
+  "Elizabeth Bay": {x:0.12, y:0.86, wrong:"penguin"},
+  "Forest Lodge":  {x:0.88, y:0.18, wrong:"volcano"},
+  "Haymarket":     {x:0.12, y:0.94, wrong:"bigben"},
+  "Millers Point": {x:0.90, y:0.10, wrong:"pisa"},
+  "Moore Park":    {x:0.10, y:0.13, wrong:"snowflake"},
+  "Newtown":       {x:0.90, y:0.90, wrong:"ufo"},
+  "Paddington":    {x:0.06, y:0.10, wrong:"windmill"},
+  "Potts Point":   {x:0.07, y:0.10, wrong:"pyramid"},
+  "Pyrmont":       {x:0.10, y:0.08, wrong:"iceberg"},
+  "Redfern":       {x:0.10, y:0.12, wrong:"eiffel"},
+  "Rushcutters Bay":{x:0.08, y:0.15, wrong:"penguin"},
+  "Sydney":        {x:0.90, y:0.15, wrong:"camel"},
+  "The Rocks":     {x:0.10, y:0.15, wrong:"snowman"},
+  "Ultimo":        {x:0.90, y:0.10, wrong:"moai"},
+  "Glebe":         {x:0.10, y:0.12, wrong:"volcano"},
+  "Waterloo":      {x:0.08, y:0.10, wrong:"igloo"},
+  "Woolloomooloo": {x:0.95, y:0.05, size:0.11, wrong:"bigben"},
+  "Annandale":     {x:0.08, y:0.10, wrong:"pisa"},
+  "Ashfield":      {x:0.06, y:0.07, size:0.09, wrong:"cactus"}
+};
+const GAG_SIZE = 0.14;
+
+/* Doodle library: simple things that cannot be in Sydney at all — polylines in a unit box, drawn in pencil */
+const circle=(cx,cy,r,n=28,a0=0,a1=Math.PI*2)=>{ const p=[]; for(let i=0;i<=n;i++){ const a=a0+(a1-a0)*i/n; p.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]); } return p; };
+const ell=(cx,cy,rx,ry,n=28,a0=0,a1=Math.PI*2)=>{ const p=[]; for(let i=0;i<=n;i++){ const a=a0+(a1-a0)*i/n; p.push([cx+Math.cos(a)*rx,cy+Math.sin(a)*ry]); } return p; };
+const DOODLES = {
+  eiffel:   [ [[.08,.95],[.3,.95],[.4,.6],[.46,.3],[.5,.05],[.54,.3],[.6,.6],[.7,.95],[.92,.95]], [[.3,.95],[.4,.78],[.5,.72],[.6,.78],[.7,.95]], [[.37,.62],[.63,.62]], [[.42,.4],[.58,.4]], [[.45,.28],[.55,.28]], [[.38,.7],[.62,.7]] ],
+  pyramid:  [ [[.05,.85],[.5,.15],[.95,.85],[.05,.85]], [[.5,.15],[.62,.85]], [[.62,.85],[.05,.85]], circle(.85,.2,.08), [[.75,.06],[.78,.1]],[[.95,.06],[.92,.1]],[[.97,.2],[1.0,.2]],[[.7,.2],[.73,.2]] ],
+  igloo:    [ circle(.5,.75,.42,32,Math.PI,Math.PI*2), [[.08,.75],[.92,.75]], [[.12,.55],[.88,.55]], [[.24,.4],[.76,.4]], [[.38,.75],[.38,.55]],[[.62,.75],[.62,.55]], [[.5,.55],[.5,.4]], [[.25,.55],[.25,.4]], [[.75,.55],[.75,.4]], circle(.5,.75,.16,16,Math.PI,Math.PI*2), [[.34,.75],[.66,.75]] ],
+  snowman:  [ circle(.5,.76,.22), circle(.5,.45,.16), circle(.5,.2,.12), [[.36,.1],[.64,.1]], [[.4,.1],[.4,0],[.6,0],[.6,.1]], circle(.46,.18,.015,8), circle(.54,.18,.015,8), [[.5,.22],[.64,.25],[.5,.27]], [[.34,.42],[.1,.3]], [[.66,.42],[.9,.3]], circle(.5,.42,.015,8), circle(.5,.5,.015,8), circle(.5,.7,.015,8), circle(.5,.8,.015,8) ],
+  camel:    [ [[.12,.62],[.14,.5],[.22,.36],[.34,.3],[.44,.4],[.52,.3],[.64,.3],[.74,.42],[.8,.6]], [[.12,.62],[.8,.62]], [[.8,.6],[.84,.4],[.86,.25],[.92,.2],[.98,.24],[.97,.3],[.9,.32],[.9,.62]], circle(.9,.24,.012,8), [[.2,.62],[.18,.92]], [[.3,.62],[.3,.92]], [[.64,.62],[.64,.92]], [[.76,.62],[.78,.92]], [[.12,.62],[.04,.7]] ],
+  cactus:   [ [[.42,.85],[.42,.15],[.5,.07],[.58,.15],[.58,.85]], [[.42,.5],[.3,.5],[.22,.44],[.22,.25],[.28,.18],[.34,.25],[.34,.42],[.42,.42]], [[.58,.62],[.68,.62],[.76,.56],[.76,.32],[.7,.25],[.64,.32],[.64,.54],[.58,.54]], [[.28,.85],[.72,.85],[.68,.98],[.32,.98],[.28,.85]] ],
+  penguin:  [ ell(.5,.6,.28,.36), ell(.5,.66,.17,.26), circle(.5,.2,.14), circle(.44,.17,.02,8), circle(.56,.17,.02,8), [[.5,.22],[.58,.28],[.42,.28],[.5,.22]], [[.22,.5],[.06,.72],[.22,.8]], [[.78,.5],[.94,.72],[.78,.8]], [[.4,.95],[.28,1.0],[.44,1.0]], [[.6,.95],[.72,1.0],[.56,1.0]] ],
+  volcano:  [ [[.05,.9],[.36,.32],[.64,.32],[.95,.9],[.05,.9]], [[.36,.32],[.45,.4],[.5,.34],[.56,.4],[.64,.32]], [[.5,.36],[.46,.5],[.54,.62],[.5,.9]], [[.45,.4],[.34,.55],[.38,.72]], [[.56,.4],[.66,.58],[.62,.74]], [[.4,.3],[.35,.2],[.42,.12],[.5,.18],[.56,.08],[.64,.12],[.66,.22],[.6,.3]] ],
+  bigben:   [ [[.35,.95],[.35,.35],[.65,.35],[.65,.95]], [[.3,.35],[.7,.35],[.5,.05],[.3,.35]], circle(.5,.5,.1), [[.5,.5],[.5,.44]], [[.5,.5],[.55,.52]], [[.4,.7],[.6,.7]], [[.4,.8],[.6,.8]], [[.43,.7],[.43,.8]],[[.5,.7],[.5,.8]],[[.57,.7],[.57,.8]], [[.5,.05],[.5,-.02]], [[.2,.95],[.8,.95]] ],
+  pisa:     [ [[.3,.95],[.42,.15],[.68,.2],[.6,.95],[.3,.95]], [[.44,.3],[.66,.34]], [[.41,.45],[.65,.49]], [[.38,.6],[.63,.64]], [[.35,.75],[.61,.79]], [[.44,.15],[.5,.05],[.68,.1],[.68,.2]], [[.2,.95],[.8,.95]] ],
+  snowflake:[ [[.5,.05],[.5,.95]], [[.11,.275],[.89,.725]], [[.11,.725],[.89,.275]], [[.5,.15],[.42,.22]],[[.5,.15],[.58,.22]], [[.5,.85],[.42,.78]],[[.5,.85],[.58,.78]], [[.2,.32],[.28,.24]],[[.2,.32],[.3,.38]], [[.8,.68],[.72,.76]],[[.8,.68],[.7,.62]], [[.2,.68],[.28,.76]],[[.2,.68],[.3,.62]], [[.8,.32],[.72,.24]],[[.8,.32],[.7,.38]] ],
+  ufo:      [ ell(.5,.55,.44,.13), circle(.5,.46,.2,24,Math.PI,Math.PI*2), circle(.3,.55,.025,8), circle(.5,.6,.025,8), circle(.7,.55,.025,8), [[.34,.67],[.15,.98]], [[.66,.67],[.85,.98]] ],
+  iceberg:  [ [[.3,.55],[.45,.15],[.55,.3],[.68,.1],[.85,.55]], [[.05,.55],[.95,.55]], [[.3,.55],[.2,.75],[.5,.95],[.8,.72],[.85,.55]], [[.05,.62],[.15,.58],[.25,.63]], [[.75,.64],[.85,.6],[.95,.65]] ],
+  moai:     [ [[.35,.95],[.3,.5],[.34,.2],[.45,.08],[.62,.08],[.72,.2],[.7,.5],[.65,.95]], [[.3,.42],[.4,.4],[.5,.44],[.6,.4],[.7,.42]], circle(.42,.5,.03,10), circle(.6,.5,.03,10), [[.5,.5],[.46,.7],[.56,.72]], [[.42,.82],[.6,.82]], [[.15,.95],[.85,.95]] ],
+  windmill: [ [[.32,.95],[.4,.45],[.6,.45],[.68,.95],[.32,.95]], [[.38,.45],[.5,.3],[.62,.45]], [[.5,.35],[.75,.1]], [[.5,.35],[.25,.1]], [[.5,.35],[.75,.6]], [[.5,.35],[.25,.6]], [[.62,.22],[.72,.14],[.66,.24]], [[.38,.22],[.28,.14],[.34,.24]], [[.45,.95],[.45,.78],[.55,.78],[.55,.95]], [[.15,.95],[.85,.95]] ]
+};
+
+/* ---------- index ---------- */
+const listEl = document.getElementById('list');
+const qEl = document.getElementById('q');
+let current = null;
+
+function renderList(filter=""){
+  const f = filter.trim().toLowerCase();
+  listEl.innerHTML = "";
+  let count = 0;
+  for (const [region, subs] of Object.entries(REGIONS)){
+    const hits = subs.filter(s => s.toLowerCase().includes(f));
+    if (!hits.length) continue;
+    const h = document.createElement('div'); h.className='region'; h.textContent=region; listEl.appendChild(h);
+    for (const s of hits){
+      const b = document.createElement('button');
+      b.type='button'; b.textContent=s; b.dataset.suburb=s;
+      if (ART[s]) b.classList.add('has-art');
+      if (s===current) b.classList.add('on');
+      const d=document.createElement('span'); d.className='dot'; b.appendChild(d);
+      b.addEventListener('click', ()=>choose(s));
+      listEl.appendChild(b); count++;
+    }
+  }
+  if (!count){ const e=document.createElement('div'); e.className='empty'; e.textContent=`No suburb called “${filter}”. Try another spelling.`; listEl.appendChild(e); }
+}
+qEl.addEventListener('input', e=>renderList(e.target.value));
+renderList();
+
+/* ---------- drawing engine ---------- */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const sheet = document.getElementById('sheet');
+const promptEl = document.getElementById('prompt');
+const stageEl = document.getElementById('stage');
+const actionsEl = document.getElementById('actions');
+const noteEl = document.getElementById('note');
+const stitch = document.getElementById('stitch');
+const knot = document.getElementById('knot');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let W=0,H=0, raf=0, job=0;
+
+function setSize(){
+  const r = sheet.getBoundingClientRect();
+  const dpr = Math.min(devicePixelRatio||1, 2);
+  W = Math.round(r.width*dpr); H = Math.round(r.height*dpr);
+  cv.width=W; cv.height=H;
+}
+
+function loadImage(src){
+  return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
+}
+function offscreen(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
+
+/* value noise, 2 octaves, returns Float32Array in [0,1] */
+function noiseField(w,h,cells,seed){
+  let s=seed>>>0; const rnd=()=>{ s^=s<<13; s>>>=0; s^=s>>>17; s^=s<<5; s>>>=0; return (s>>>0)/4294967296; };
+  const gw=cells+2, gh=Math.ceil(cells*h/w)+2;
+  const g=new Float32Array(gw*gh); for(let i=0;i<g.length;i++) g[i]=rnd();
+  const out=new Float32Array(w*h);
+  const sm=t=>t*t*(3-2*t);
+  for(let y=0;y<h;y++){ const fy=y/h*(gh-1); const y0=fy|0, ty=sm(fy-y0);
+    for(let x=0;x<w;x++){ const fx=x/w*(gw-1); const x0=fx|0, tx=sm(fx-x0);
+      const a=g[y0*gw+x0], b=g[y0*gw+x0+1], c=g[(y0+1)*gw+x0], d=g[(y0+1)*gw+x0+1];
+      out[y*w+x]=(a*(1-tx)+b*tx)*(1-ty)+(c*(1-tx)+d*tx)*ty; } }
+  return out;
+}
+function combine(w,h,parts){ // parts: [{field, weight}] + optional fn(x,y) base
+  const out=new Float32Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ let v=0; const i=y*w+x;
+    for(const p of parts) v+= p.fn ? p.fn(x/w,y/h)*p.weight : p.field[i]*p.weight;
+    out[i]=v; }
+  // normalise to 0..1
+  let mn=1e9,mx=-1e9; for(const v of out){ if(v<mn)mn=v; if(v>mx)mx=v; }
+  for(let i=0;i<out.length;i++) out[i]=(out[i]-mn)/(mx-mn);
+  return out;
+}
+
+function buildLayers(img){
+  const base=offscreen(W,H); const b=base.getContext('2d');
+  b.fillStyle='#FFFFFF'; b.fillRect(0,0,W,H);
+  // fit image into sheet, respecting aspect
+  const s=Math.min(W/img.width,H*0.82/img.height); const iw=img.width*s, ih=img.height*s;
+  b.drawImage(img,(W-iw)/2,(H*0.82-ih)/2,iw,ih);
+  const fit={ox:(W-iw)/2,oy:(H*0.82-ih)/2,iw,ih};
+  const src=b.getImageData(0,0,W,H).data;
+
+  // luminance
+  const lum=new Float32Array(W*H);
+  for(let i=0;i<W*H;i++) lum[i]=(0.299*src[i*4]+0.587*src[i*4+1]+0.114*src[i*4+2]);
+
+  // sobel edges -> linework layer
+  const line=offscreen(W,H); const lc=line.getContext('2d');
+  const ld=lc.createImageData(W,H); const L=ld.data;
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+    const i=y*W+x;
+    const gx=-lum[i-W-1]-2*lum[i-1]-lum[i+W-1]+lum[i-W+1]+2*lum[i+1]+lum[i+W+1];
+    const gy=-lum[i-W-1]-2*lum[i-W]-lum[i-W+1]+lum[i+W-1]+2*lum[i+W]+lum[i+W+1];
+    let m=Math.sqrt(gx*gx+gy*gy)/4; // 0..~255
+    let a=Math.min(255, m*1.6);
+    if (a<18) a=0;
+    L[i*4]=38; L[i*4+1]=37; L[i*4+2]=34; L[i*4+3]=a;
+  }
+  lc.putImageData(ld,0,0);
+
+  // rough sketch layer: only the big shapes, computed at half size on blurred tone → soft, thicker, lighter lines
+  const hw=W>>1, hh=H>>1; const lo=new Float32Array(hw*hh);
+  for(let y=0;y<hh;y++)for(let x=0;x<hw;x++){ const i=(y*2)*W+x*2; lo[y*hw+x]=(lum[i]+lum[i+1]+lum[i+W]+lum[i+W+1])/4; }
+  const bl=new Float32Array(hw*hh); const R=2;
+  for(let pass=0;pass<2;pass++){ const src2=pass?bl:lo, dst=pass?lo:bl;
+    for(let y=0;y<hh;y++)for(let x=0;x<hw;x++){ let s=0,n=0; for(let k=-R;k<=R;k++){ const xx=x+k; if(xx>=0&&xx<hw){s+=src2[y*hw+xx];n++;} } dst[y*hw+x]=s/n; }
+    for(let y=0;y<hh;y++)for(let x=0;x<hw;x++){ let s=0,n=0; for(let k=-R;k<=R;k++){ const yy=y+k; if(yy>=0&&yy<hh){s+=dst[yy*hw+x];n++;} } src2[y*hw+x]=s/n; }
+  }
+  const sk=offscreen(hw,hh); const skc=sk.getContext('2d'); const kd=skc.createImageData(hw,hh); const K=kd.data;
+  for(let y=1;y<hh-1;y++)for(let x=1;x<hw-1;x++){ const i=y*hw+x;
+    const gx=-lo[i-hw-1]-2*lo[i-1]-lo[i+hw-1]+lo[i-hw+1]+2*lo[i+1]+lo[i+hw+1];
+    const gy=-lo[i-hw-1]-2*lo[i-hw]-lo[i-hw+1]+lo[i+hw-1]+2*lo[i+hw]+lo[i+hw+1];
+    let a=Math.sqrt(gx*gx+gy*gy)/4*2.4; if(a<45) a=0; K[i*4]=96;K[i*4+1]=94;K[i*4+2]=90;K[i*4+3]=Math.min(190,a); }
+  skc.putImageData(kd,0,0);
+  const sketch=offscreen(W,H); const skx=sketch.getContext('2d'); skx.imageSmoothingEnabled=true; skx.drawImage(sk,0,0,W,H);
+
+  // graphite shading layer (tonal, no colour)
+  const shade=offscreen(W,H); const sc=shade.getContext('2d');
+  const sd=sc.createImageData(W,H); const S=sd.data;
+  for(let i=0;i<W*H;i++){ const v=lum[i]; const a=Math.max(0,(215-v))*1.05; // darker = more graphite
+    S[i*4]=52; S[i*4+1]=50; S[i*4+2]=46; S[i*4+3]=Math.min(210,a); }
+  sc.putImageData(sd,0,0);
+
+  return {base, line, shade, sketch, fit};
+}
+
+/* mask at half res */
+function makeMasks(px){
+  const mw=Math.ceil(W/2), mh=Math.ceil(H/2);
+  // which marker does this pixel need? order the pens: beige → yellow/ochre → red → green → blue/teal → brown → grey/black
+  const pen=new Float32Array(mw*mh);
+  for(let y=0;y<mh;y++)for(let x=0;x<mw;x++){ const i=((y*2)*W+x*2)*4; const r=px[i]/255,g=px[i+1]/255,b=px[i+2]/255;
+    const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn; const s=d===0?0:d/(1-Math.abs(2*l-1));
+    let hue=0; if(d){ if(mx===r)hue=((g-b)/d+6)%6; else if(mx===g)hue=(b-r)/d+2; else hue=(r-g)/d+4; hue*=60; }
+    let k;
+    if(l>0.82&&s<0.5) k=0;                       // paper-light beige
+    else if(s<0.16) k=6;                          // greys & black
+    else if(hue>=35&&hue<70) k=1;                 // yellow / ochre
+    else if(hue<20||hue>=330) k=2;                // red
+    else if(hue>=70&&hue<170) k=3;                // green
+    else if(hue>=170&&hue<270) k=4;               // blue / teal
+    else k=5;                                     // browns & the rest
+    pen[y*mw+x]=k/6; }
+  const n1=noiseField(mw,mh,9,1234), n2=noiseField(mw,mh,26,777), n3=noiseField(mw,mh,5,42), n4=noiseField(mw,mh,14,99);
+  return {
+    mw,mh,
+    // rough sketch: big loose patches across the whole sheet at once
+    sketch: combine(mw,mh,[{field:n3,weight:0.6},{field:n1,weight:0.3},{fn:(x,y)=>Math.hypot(x-0.5,(y-0.5)*0.6),weight:0.1}]),
+    // details: fine lines pop up around the composition, roughly centre-out
+    line: combine(mw,mh,[{field:n1,weight:0.4},{field:n2,weight:0.25},{fn:(x,y)=>Math.hypot(x-0.5,(y-0.5)*0.6)*1.2,weight:0.35}]),
+    // colour: one marker at a time (pen order), patchy within each pen
+    colour: combine(mw,mh,[{field:pen,weight:0.86},{field:n4,weight:0.09},{field:n2,weight:0.05}])
+  };
+}
+
+const PHASES = [ // seconds
+  {key:'sketch',  dur:6,   label:'Rough sketch'},
+  {key:'gag',     dur:6,   label:'Hmm… no.'},
+  {key:'line',    dur:8.5, label:'Fineliner details'},
+  {key:'marker',  dur:18,  label:'Markers, one pen at a time'},
+  {key:'sign',    dur:2.2, label:'Signing'}
+];
+const TOTAL = PHASES.reduce((a,p)=>a+p.dur,0);
+
+async function choose(name){
+  current=name; renderList(qEl.value);
+  const src = ART[name] || ART[DEMO];
+  noteEl.textContent = ART[name] ? "" : `The ${name} illustration hasn't been painted yet — this is the ${DEMO} artwork as a demo.`;
+  if (innerWidth<=860) sheet.scrollIntoView({behavior: reduced?'auto':'smooth', block:'start'});
+  await draw(name, src);
+}
+
+async function draw(name, src){
+  const myJob=++job; cancelAnimationFrame(raf);
+  actionsEl.hidden=true; knot.style.opacity=0; setStitch(0);
+  promptEl.classList.add('hide'); stageEl.textContent='Sharpening the pencil';
+  setSize();
+  await document.fonts.ready.catch(()=>{});
+  const img = await loadImage(src);
+  if (myJob!==job) return;
+  const layers = buildLayers(img);
+  const px = layers.base.getContext('2d').getImageData(0,0,W,H).data;
+  const masks = makeMasks(px);
+
+  /* the wrong doodle, on the margin next to the drawing */
+  const g = GAG[name] || (ART[name]?null:GAG[DEMO]);
+  const gag=offscreen(W,H); const gc=gag.getContext('2d'); gc.lineCap='round'; gc.lineJoin='round'; gc.filter=`blur(${1.6*W/1000}px)`;
+  let doodle=null;
+  if(g&&DOODLES[g.wrong]){ const {ox,oy,iw,ih}=layers.fit; const size=(g.size||GAG_SIZE)*iw, pad=size/2+6; const cx=Math.min(W-pad,Math.max(pad,ox+g.x*iw)), cy=Math.min(H-pad,Math.max(pad,oy+g.y*ih));
+    const wob=(i)=>Math.sin(i*12.9898)*0.012;
+    const polys=DOODLES[g.wrong].map((pl,k)=>pl.map(([x,y],i)=>[cx-size/2+(x+wob(i+k*7))*size, cy-size/2+(y+wob(i*3+k))*size]));
+    const segs=[]; let total=0; polys.forEach(pl=>{ for(let i=1;i<pl.length;i++){ const L=Math.hypot(pl[i][0]-pl[i-1][0],pl[i][1]-pl[i-1][1]); segs.push({a:pl[i-1],b:pl[i],L,from:total}); total+=L; } });
+    doodle={segs,total,cx,cy,size};
+  }
+  let drawnTo=0; const crumbs=[];
+  function drawDoodleTo(len){
+    gc.strokeStyle='rgb(96,94,90)'; gc.lineWidth=4*S; gc.globalAlpha=0.42;   // same pencil as the rough sketch
+    for(const s of doodle.segs){ if(s.from+s.L<=drawnTo||s.from>=len) continue;
+      const t0=Math.max(0,(drawnTo-s.from)/s.L), t1=Math.min(1,(len-s.from)/s.L);
+      gc.beginPath(); gc.moveTo(s.a[0]+(s.b[0]-s.a[0])*t0, s.a[1]+(s.b[1]-s.a[1])*t0); gc.lineTo(s.a[0]+(s.b[0]-s.a[0])*t1, s.a[1]+(s.b[1]-s.a[1])*t1); gc.stroke();
+      cursor.x=s.a[0]+(s.b[0]-s.a[0])*t1; cursor.y=s.a[1]+(s.b[1]-s.a[1])*t1; cursor.tx=cursor.x; cursor.ty=cursor.y; }
+    drawnTo=len;
+  }
+  function erase(q){
+    const d=doodle; const sweeps=4; const k=q*sweeps; const row=Math.min(sweeps-1,Math.floor(k)); const u=k-row; const dir=row%2?1-u:u;
+    const x=d.cx-d.size*0.6+dir*d.size*1.2, y=d.cy-d.size*0.5+(row+0.5)/sweeps*d.size;
+    gc.globalCompositeOperation='destination-out'; gc.globalAlpha=1; gc.lineWidth=d.size/sweeps*1.15; gc.lineCap='round';
+    gc.beginPath(); gc.moveTo(cursor.x,cursor.y); gc.lineTo(x,y); gc.stroke(); gc.globalCompositeOperation='source-over';
+    cursor.x=x; cursor.y=y; cursor.tx=x; cursor.ty=y;
+    if(Math.random()<0.7) crumbs.push({x:x+(Math.random()-0.5)*d.size*0.4, y:y+(Math.random()-0.5)*d.size*0.15, vy:0.4*S+Math.random()*S, r:(0.8+Math.random()*1.4)*S, a:0.8});
+  }
+  function drawCrumbs(){ for(const c of crumbs){ c.y+=c.vy; c.vy+=0.12*S; c.a-=0.018; if(c.a<=0) continue; ctx.globalAlpha=c.a; ctx.fillStyle='#8a8580'; ctx.beginPath(); ctx.ellipse(c.x,c.y,c.r*1.6,c.r,0.6,0,Math.PI*2); ctx.fill(); } ctx.globalAlpha=1; while(crumbs.length&&crumbs[0].a<=0) crumbs.shift(); }
+
+  if (reduced){ ctx.drawImage(layers.base,0,0); sign(name,1); finish(); return; }
+
+  const layer=offscreen(W,H); const lc=layer.getContext('2d');          // the layer currently being masked in
+  const maskC=offscreen(masks.mw,masks.mh); const mc=maskC.getContext('2d');
+  const mid=mc.createImageData(masks.mw,masks.mh);
+  const inkMask=offscreen(W,H); const im=inkMask.getContext('2d'); im.lineCap='round'; im.strokeStyle='#fff';  // where marker has touched
+  const colour=offscreen(W,H); const cc=colour.getContext('2d');       // the artwork, revealed through inkMask
+  const angleField=noiseField(masks.mw,masks.mh,7,2024);
+  const S=W/1000;
+
+  const cursor={x:W*0.05,y:H*0.5,tx:W*0.05,ty:H*0.5};
+  let tip='rgb(60,60,60)';
+  let start=performance.now(), phaseIdx=0, phaseStart=start;
+
+  function maskTo(field,t){
+    const D=mid.data; const soft=0.07;
+    for(let i=0;i<field.length;i++){ let a=(t*(1+soft)-field[i])/soft; a=a<0?0:a>1?1:a; D[i*4+3]=a*255|0; D[i*4]=D[i*4+1]=D[i*4+2]=0; }
+    mc.putImageData(mid,0,0);
+  }
+  function frontier(field,t){
+    let best=null,bd=1e12;
+    for(let k=0;k<160;k++){ const i=(Math.random()*field.length)|0; const d=field[i]-t;
+      if(d>-0.03&&d<0.015){ const x=(i%masks.mw)*2,y=(i/masks.mw|0)*2; const dd=(x-cursor.x)**2+(y-cursor.y)**2+Math.random()*40000;
+        if(dd<bd){bd=dd;best={x,y};} } }
+    if(best){cursor.tx=best.x;cursor.ty=best.y;}
+    cursor.x+=(cursor.tx-cursor.x)*0.28; cursor.y+=(cursor.ty-cursor.y)*0.28;
+  }
+  const lumAt=(x,y)=>{ if(x<0||y<0||x>=W||y>=H) return 255; const i=((y|0)*W+(x|0))*4; return 0.299*px[i]+0.587*px[i+1]+0.114*px[i+2]; };
+
+  /* one marker stroke: a broad flat swipe that reveals the artwork underneath it.
+     First pass leaves the ink slightly translucent; overlapping passes bring it to full — like layering marker. */
+  function markerStroke(x,y,late){
+    if(x<0||y<0||x>=W-1||y>=H-1) return false;
+    const lum=lumAt(x,y); if(lum>244) return false;
+    const mi=((y/2)|0)*masks.mw+((x/2)|0);
+    const base=-0.55+(angleField[mi]-0.5)*1.4;
+    const ang=Math.random()<0.3 ? base+1.5 : base;
+    const len=(16+Math.random()*30)*S*(late?1.5:1);
+    const dx=Math.cos(ang)*len/2, dy=Math.sin(ang)*len/2;
+    if(!late && (lumAt(x-dx,y-dy)>246||lumAt(x+dx,y+dy)>246)) return false;
+    im.globalAlpha = late ? 1 : 0.62+Math.random()*0.25;
+    im.lineWidth=(7+Math.random()*7)*S;
+    const bow=(Math.random()-0.5)*len*0.1;
+    im.beginPath(); im.moveTo(x-dx,y-dy); im.quadraticCurveTo(x+bow*Math.sin(ang),y-bow*Math.cos(ang),x+dx,y+dy); im.stroke();
+    const i=((y|0)*W+(x|0))*4; tip=`rgb(${px[i]},${px[i+1]},${px[i+2]})`;
+    return true;
+  }
+  function swipe(field,t,budget){
+    const late=t>0.9; let laid=0,tries=0,anchor=null;
+    while(laid<budget && tries<budget*5){
+      tries++;
+      const i=(Math.random()*field.length)|0; const d=field[i]-t;
+      if(late){ if(d>0.02) continue; } else if(d<-0.07||d>0.005) continue;
+      const x=(i%masks.mw)*2+Math.random()*2, y=(i/masks.mw|0)*2+Math.random()*2;
+      if(markerStroke(x,y,late)){ laid++; if(!anchor||Math.random()<0.12) anchor={x,y}; }
+    }
+    im.globalAlpha=1;
+    if(anchor){ cursor.tx=anchor.x; cursor.ty=anchor.y; }
+    cursor.x+=(cursor.tx-cursor.x)*0.22; cursor.y+=(cursor.ty-cursor.y)*0.22;
+  }
+  function drawTool(kind){
+    const s=S; ctx.save(); ctx.translate(cursor.x,cursor.y);
+    if(kind==='marker'){
+      ctx.rotate(-0.95);
+      ctx.fillStyle=tip; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(9*s,-5*s); ctx.lineTo(9*s,5*s); ctx.closePath(); ctx.fill();   // chisel tip
+      ctx.fillStyle='#EDEDEA'; ctx.fillRect(9*s,-6*s,14*s,12*s);                                                                       // collar
+      ctx.fillStyle=tip; ctx.fillRect(23*s,-7*s,70*s,14*s);                                                                             // barrel in ink colour
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(23*s,-7*s,70*s,3*s);
+      ctx.fillStyle='#2b2a27'; ctx.fillRect(93*s,-7*s,3*s,14*s);
+    } else if(kind==='eraser'){
+      ctx.rotate(-0.5);
+      ctx.fillStyle='#E9A0A8'; ctx.beginPath(); ctx.roundRect(-14*s,-9*s,54*s,18*s,4*s); ctx.fill();
+      ctx.fillStyle='#F6F1E7'; ctx.fillRect(22*s,-9*s,18*s,18*s);
+      ctx.strokeStyle='#3a3835'; ctx.lineWidth=1.2*s; ctx.beginPath(); ctx.roundRect(-14*s,-9*s,54*s,18*s,4*s); ctx.stroke();
+    } else if(kind==='sketch'){
+      ctx.rotate(-0.75);
+      ctx.fillStyle='#4a4844'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(9*s,-3*s); ctx.lineTo(9*s,3*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#EAD9B8'; ctx.beginPath(); ctx.moveTo(9*s,-3.5*s); ctx.lineTo(18*s,-4.5*s); ctx.lineTo(18*s,4.5*s); ctx.lineTo(9*s,3.5*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#C9A54A'; ctx.fillRect(18*s,-4.5*s,66*s,9*s);
+      ctx.fillStyle='#D2342A'; ctx.fillRect(84*s,-4.5*s,8*s,9*s);
+    } else {
+      ctx.rotate(-0.75);
+      ctx.fillStyle='#262522'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(7*s,-2*s); ctx.lineTo(7*s,2*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#D8D8D4'; ctx.fillRect(7*s,-3*s,10*s,6*s);
+      ctx.fillStyle='#2b2a27'; ctx.fillRect(17*s,-4*s,72*s,8*s);
+      ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fillRect(17*s,-4*s,72*s,2*s);
+    }
+    ctx.restore();
+  }
+  function compose(){
+    ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
+    if(phaseIdx===0){ ctx.drawImage(layer,0,0); return; }
+    ctx.drawImage(layers.sketch,0,0);            // rough sketch stays underneath
+    if(phaseIdx===1){ ctx.drawImage(gag,0,0); drawCrumbs(); return; }
+    if(phaseIdx===2){ ctx.drawImage(layer,0,0); return; }
+    ctx.drawImage(layers.line,0,0);              // fineliner underneath…
+    cc.clearRect(0,0,W,H); cc.drawImage(layers.base,0,0);
+    cc.globalCompositeOperation='destination-in'; cc.drawImage(inkMask,0,0); cc.globalCompositeOperation='source-over';
+    ctx.drawImage(colour,0,0);                   // …marker colour on top, opaque where it has been laid
+  }
+
+  function frame(now){
+    if(myJob!==job) return;
+    const elapsed=(now-start)/1000;
+    setStitch(Math.min(1,elapsed/TOTAL));
+    let ph=PHASES[phaseIdx]; let t=(now-phaseStart)/1000/ph.dur;
+    if(t>=1){
+      if(ph.key==='marker'){ im.globalAlpha=1; im.fillStyle='#fff'; im.fillRect(0,0,W,H); }   // every last sliver is inked
+      phaseIdx++; phaseStart=now;
+      if(phaseIdx>=PHASES.length){ ctx.drawImage(layers.base,0,0); sign(name,1); finish(); return; }
+      ph=PHASES[phaseIdx]; t=0;
+    }
+    if(ph.key==='gag' && !doodle){ phaseIdx++; phaseStart=now; ph=PHASES[phaseIdx]; t=0; }
+    stageEl.textContent=ph.label;
+    const e=t*t*(3-2*t)*0.85+t*0.15;
+    if(ph.key==='sketch'||ph.key==='line'){
+      const src=ph.key==='sketch'?layers.sketch:layers.line, fld=ph.key==='sketch'?masks.sketch:masks.line;
+      maskTo(fld,e);
+      lc.clearRect(0,0,W,H); lc.drawImage(src,0,0);
+      lc.globalCompositeOperation='destination-in'; lc.drawImage(maskC,0,0,W,H); lc.globalCompositeOperation='source-over';
+      compose(); frontier(fld,e); drawTool(ph.key);
+    } else if(ph.key==='marker'){
+      swipe(masks.colour,e,120); compose(); drawTool('marker');
+    } else if(ph.key==='gag'){
+      // 0–.55 draw the wrong thing · .55–.66 look at it · .66–1 rub it out
+      if(t<0.55){ const q=t/0.55; drawDoodleTo(doodle.total*(q*q*(3-2*q))); compose(); drawTool('sketch'); }
+      else if(t<0.66){ compose(); cursor.x+=(doodle.cx+doodle.size*0.7-cursor.x)*0.08; cursor.y+=(doodle.cy+doodle.size*0.6-cursor.y)*0.08; drawTool('sketch'); }
+      else { erase((t-0.66)/0.34); compose(); drawTool('eraser'); }
+    } else {
+      ctx.drawImage(layers.base,0,0); const s2=t<0.5?2*t*t:-1+(4-2*t)*t; sign(name,s2,true);
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(t=>{start=t;phaseStart=t;frame(t);});
+}
+
+/* hand-lettered signature, spaced caps like the artwork */
+function sign(name,progress,withPen){
+  const text=name.toUpperCase();
+  const size=H*0.085; ctx.font=`700 ${size}px Caveat, "Segoe Script", "Bradley Hand", cursive`;
+  ctx.textBaseline='alphabetic'; ctx.fillStyle='#2b2a27';
+  const track=size*0.22;
+  const widths=[...text].map(ch=>ch===' '?size*0.42:ctx.measureText(ch).width);
+  const total=widths.reduce((a,w)=>a+w+track,0)-track;
+  let x=(W-total)/2, y=H*0.93;
+  const chars=text.length, per=1/chars;
+  let seed=7; const r=()=>{seed=(seed*9301+49297)%233280; return seed/233280-0.5;};
+  let penX=x, penY=y;
+  [...text].forEach((ch,k)=>{
+    const p=Math.max(0,Math.min(1,(progress-k*per)/per));
+    const rot=r()*0.06, dy=r()*size*0.06;
+    if(p>0&&ch!==' '){
+      ctx.save(); ctx.beginPath(); ctx.rect(x-2,y-size,widths[k]*p+4,size*1.35); ctx.clip();
+      ctx.translate(x,y+dy); ctx.rotate(rot); ctx.fillText(ch,0,0); ctx.restore();
+    }
+    if(p>0&&p<1){ penX=x+widths[k]*p; penY=y-size*0.25; }
+    x+=widths[k]+track;
+  });
+  if(withPen&&progress<1){
+    const s=W/1000; ctx.save(); ctx.translate(penX,penY); ctx.rotate(-0.85);
+    ctx.fillStyle='#262522'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(8*s,-2.5*s); ctx.lineTo(8*s,2.5*s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#3b3935'; ctx.fillRect(8*s,-3.2*s,70*s,6.4*s); ctx.restore();
+  }
+}
+
+function finish(){ stageEl.textContent=''; actionsEl.hidden=false; knot.style.opacity=1; setStitch(1); }
+
+function setStitch(p){ const x=Math.round(p*1000); stitch.setAttribute('d',`M0 7 L${x} 7`); knot.setAttribute('cx',x); }
+
+document.getElementById('again').addEventListener('click',()=>{ if(current) choose(current); });
+document.getElementById('save').addEventListener('click',()=>{
+  const a=document.createElement('a'); a.download=`${current.replace(/\s+/g,'-').toLowerCase()}-drawn.png`; a.href=cv.toDataURL('image/png'); a.click();
+});
+addEventListener('resize',()=>{ if(current && actionsEl.hidden===false){ cancelAnimationFrame(raf); const url=cv.toDataURL(); setSize(); loadImage(url).then(i=>ctx.drawImage(i,0,0,W,H)); } });
+</script>
+</body>
+</html>
