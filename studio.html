@@ -673,6 +673,9 @@ document.getElementById('save').addEventListener('click',()=>{
   const a=document.createElement('a'); a.download=`${current.replace(/\s+/g,'-').toLowerCase()}-drawn.png`; a.href=cv.toDataURL('image/png'); a.click();
 });
 addEventListener('resize',()=>{ if(current && actionsEl.hidden===false){ cancelAnimationFrame(raf); const url=cv.toDataURL(); setSize(); loadImage(url).then(i=>ctx.drawImage(i,0,0,W,H)); } });
+
+/* open with art, not a blank sheet: auto-draw one suburb on load */
+choose(DEMO);
 </script>
 </body>
 </html>
