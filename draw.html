@@ -660,6 +660,8 @@ function makeMasks(px){
   };
 }
 
+const GLYPHS = {"A":{w:0.7,s:[[[0,1],[0.35,0],[0.7,1]],[[0.13,0.62],[0.57,0.62]]]}, "B":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.082,0.005],[0.161,0.019],[0.233,0.042],[0.297,0.073],[0.349,0.111],[0.388,0.154],[0.412,0.201],[0.42,0.25],[0.412,0.299],[0.388,0.346],[0.349,0.389],[0.297,0.427],[0.233,0.458],[0.161,0.481],[0.082,0.495],[0,0.5]],[[0,0.48],[0.094,0.485],[0.184,0.5],[0.267,0.524],[0.339,0.556],[0.399,0.596],[0.443,0.641],[0.471,0.689],[0.48,0.74],[0.471,0.791],[0.443,0.839],[0.399,0.884],[0.339,0.924],[0.267,0.956],[0.184,0.98],[0.094,0.995],[0,1]]]}, "C":{w:0.64,s:[[[0.566,0.09],[0.479,0.028],[0.384,0.001],[0.286,0.011],[0.194,0.056],[0.114,0.135],[0.052,0.241],[0.013,0.365],[0,0.5],[0.013,0.635],[0.052,0.759],[0.114,0.865],[0.194,0.944],[0.286,0.989],[0.384,0.999],[0.479,0.972],[0.566,0.91]]]}, "D":{w:0.64,s:[[[0,0],[0,1]],[[0,0],[0.117,0.01],[0.23,0.038],[0.333,0.084],[0.424,0.146],[0.499,0.222],[0.554,0.309],[0.588,0.402],[0.6,0.5],[0.588,0.598],[0.554,0.691],[0.499,0.778],[0.424,0.854],[0.333,0.916],[0.23,0.962],[0.117,0.99],[0,1]]]}, "E":{w:0.56,s:[[[0.56,0],[0,0],[0,1],[0.56,1]],[[0,0.52],[0.44,0.52]]]}, "F":{w:0.55,s:[[[0.55,0],[0,0],[0,1]],[[0,0.52],[0.42,0.52]]]}, "G":{w:0.66,s:[[[0.582,0.09],[0.489,0.027],[0.386,0],[0.282,0.014],[0.185,0.067],[0.103,0.154],[0.042,0.269],[0.007,0.402],[0.001,0.544],[0.025,0.681],[0.076,0.804],[0.151,0.903],[0.243,0.97],[0.346,0.999],[0.45,0.988],[0.548,0.938],[0.632,0.854]],[[0.7,0.58],[0.44,0.58]],[[0.7,0.58],[0.7,0.4]]]}, "H":{w:0.64,s:[[[0,0],[0,1]],[[0.64,0],[0.64,1]],[[0,0.52],[0.64,0.52]]]}, "I":{w:0.2,s:[[[0.1,0],[0.1,1]],[[0,0],[0.2,0]],[[0,1],[0.2,1]]]}, "J":{w:0.5,s:[[[0.44,0],[0.44,0.74]],[[0.44,0.74],[0.436,0.791],[0.423,0.839],[0.403,0.884],[0.376,0.924],[0.342,0.956],[0.304,0.98],[0.263,0.995],[0.22,1],[0.177,0.995],[0.136,0.98],[0.098,0.956],[0.064,0.924],[0.037,0.884],[0.017,0.839],[0.004,0.791],[0,0.74]]]}, "K":{w:0.62,s:[[[0,0],[0,1]],[[0.6,0],[0,0.56]],[[0.18,0.42],[0.6,1]]]}, "L":{w:0.54,s:[[[0,0],[0,1],[0.54,1]]]}, "M":{w:0.82,s:[[[0,1],[0,0],[0.41,0.7],[0.82,0],[0.82,1]]]}, "N":{w:0.7,s:[[[0,1],[0,0],[0.7,1],[0.7,0]]]}, "O":{w:0.74,s:[[[0.37,0],[0.512,0.038],[0.632,0.146],[0.712,0.309],[0.74,0.5],[0.712,0.691],[0.632,0.854],[0.512,0.962],[0.37,1],[0.228,0.962],[0.108,0.854],[0.028,0.691],[0,0.5],[0.028,0.309],[0.108,0.146],[0.228,0.038],[0.37,0]]]}, "P":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]]]}, "Q":{w:0.76,s:[[[0.38,0],[0.525,0.038],[0.649,0.146],[0.731,0.309],[0.76,0.5],[0.731,0.691],[0.649,0.854],[0.525,0.962],[0.38,1],[0.235,0.962],[0.111,0.854],[0.029,0.691],[0,0.5],[0.029,0.309],[0.111,0.146],[0.235,0.038],[0.38,0]],[[0.48,0.7],[0.8,1.06]]]}, "R":{w:0.62,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]],[[0.3,0.52],[0.62,1]]]}, "S":{w:0.58,s:[[[0.44,0.036],[0.39,0.014],[0.337,0.002],[0.282,0.001],[0.228,0.009],[0.176,0.028],[0.13,0.056],[0.089,0.092],[0.058,0.135],[0.035,0.183],[0.022,0.235],[0.021,0.288],[0.03,0.34],[0.049,0.389],[0.078,0.434],[0.115,0.473],[0.43,0.478],[0.485,0.516],[0.529,0.564],[0.561,0.621],[0.577,0.683],[0.579,0.747],[0.564,0.81],[0.535,0.868],[0.492,0.918],[0.438,0.958],[0.376,0.985],[0.309,0.999],[0.241,0.998],[0.174,0.982],[0.113,0.953],[0.061,0.911],[0.02,0.86]]]}, "T":{w:0.6,s:[[[0,0],[0.6,0]],[[0.3,0],[0.3,1]]]}, "U":{w:0.66,s:[[[0,0],[0,0.72],[0,0.72],[0.006,0.665],[0.025,0.613],[0.056,0.564],[0.097,0.522],[0.147,0.487],[0.204,0.461],[0.266,0.445],[0.33,0.44],[0.394,0.445],[0.456,0.461],[0.513,0.487],[0.563,0.522],[0.604,0.564],[0.635,0.613],[0.654,0.665],[0.66,0.72],[0.66,0.72],[0.66,0]]]}, "V":{w:0.66,s:[[[0,0],[0.33,1],[0.66,0]]]}, "W":{w:0.94,s:[[[0,0],[0.235,1],[0.47,0.28],[0.705,1],[0.94,0]]]}, "X":{w:0.64,s:[[[0,0],[0.64,1]],[[0.64,0],[0,1]]]}, "Y":{w:0.64,s:[[[0,0],[0.32,0.54],[0.64,0]],[[0.32,0.54],[0.32,1]]]}, "Z":{w:0.6,s:[[[0,0],[0.6,0],[0,1],[0.6,1]]]}};
+
 const PHASES = [ // seconds
   {key:'sketch',  dur:6,   label:'Rough sketch'},
   {key:'gag',     dur:6,   label:'Hmm… no.'},
@@ -819,27 +821,44 @@ async function draw(name, src){
     ctx.drawImage(colour,0,0);                   // …marker colour on top, opaque where it has been laid
   }
 
-  /* hand-letter the suburb name along the bottom — one spaced capital at a time, black, auto-scaled so nothing clips */
+  /* hand-letter the suburb name along the bottom — the pencil TRACES each capital stroke by stroke
+     (single-line hand alphabet GLYPHS), nib following the tip; auto-scaled so nothing clips. */
   function sign(progress){
-    const text=(current||DEMO).toUpperCase(); const chars=[...text];
-    const measure=(sz)=>{ ctx.font=`700 ${sz}px "Caveat","Segoe Print","Bradley Hand",cursive`; const tr=sz*0.40; const ws=chars.map(c=>c===' '?sz*0.60:ctx.measureText(c).width); return {tr,ws,total:ws.reduce((a,w)=>a+w+tr,0)-tr}; };
-    let size=Math.max(18,H*0.082), m=measure(size); const maxW=W*0.9;
-    if(m.total>maxW){ size*=maxW/m.total; m=measure(size); }
-    ctx.font=`700 ${size}px "Caveat","Segoe Print","Bradley Hand",cursive`;
-    ctx.textBaseline='alphabetic'; ctx.textAlign='left'; ctx.fillStyle='#141414';
-    const startX=(W-m.total)/2, y=H*0.955;
-    const prog=Math.max(0,Math.min(1,progress)); const penX=startX+m.total*prog;
-    // reveal the lettering only up to the nib, sweeping left->right, so the pencil appears to WRITE each letter.
-    // the clip is full glyph-height (nothing is ever vertically cut); only the horizontal writing frontier moves.
-    ctx.save();
-    ctx.beginPath(); ctx.rect(0, y-size*1.35, penX+size*0.05, size*1.95); ctx.clip();
-    let x=startX;
-    for(let k=0;k<chars.length;k++){ const ch=chars[k];
-      if(ch!==' '){ ctx.save(); ctx.translate(x, y+Math.sin(k*1.7)*size*0.03); ctx.rotate(Math.sin(k*2.3)*0.02); ctx.fillText(ch,0,0); ctx.restore(); }
-      x+=m.ws[k]+m.tr;
+    const text=(current||DEMO).toUpperCase();
+    const capH=H*0.082, tracking=0.30, spacew=0.55;                 // em units (of cap height)
+    let adv=0; const items=[];
+    for(const ch of text){
+      if(ch===' '){ adv+=spacew; continue; }
+      const gl=GLYPHS[ch]; if(!gl){ adv+=0.55+tracking; continue; }
+      items.push({gl,x0:adv}); adv+=gl.w+tracking;
+    }
+    let em=capH, totalW=(adv-tracking)*em; const maxW=W*0.9;
+    if(totalW>maxW){ em*=maxW/totalW; totalW=(adv-tracking)*em; }
+    const startX=(W-totalW)/2, baseY=H*0.955, topY=baseY-em, jit=0.6*S;
+    const segs=[]; let total=0, li=0;                               // build one pen-path across the whole name
+    for(const it of items){
+      const bx=startX+it.x0*em, yj=Math.sin(li*1.7)*em*0.02;        // tiny per-letter baseline wobble
+      for(const pl of it.gl.s){ let prev=null;
+        for(let i=0;i<pl.length;i++){
+          const X=bx+pl[i][0]*em + Math.sin((li*7+i)*12.9898)*jit;
+          const Y=topY+pl[i][1]*em + yj + Math.sin((li*5+i)*7.13)*jit;
+          if(prev){ const L=Math.hypot(X-prev[0],Y-prev[1]); if(L>0){ segs.push({a:prev,b:[X,Y],L,from:total}); total+=L; } }
+          prev=[X,Y];
+        }
+      }
+      li++;
+    }
+    const len=Math.max(0,Math.min(1,progress))*total;              // draw the path up to the nib
+    ctx.save(); ctx.strokeStyle='#141414'; ctx.lineWidth=Math.max(1.8,2.6*S); ctx.lineCap='round'; ctx.lineJoin='round';
+    let tip=null;
+    for(const seg of segs){ if(seg.from>=len) break;
+      const t1=Math.min(1,(len-seg.from)/seg.L);
+      const ex=seg.a[0]+(seg.b[0]-seg.a[0])*t1, ey=seg.a[1]+(seg.b[1]-seg.a[1])*t1;
+      ctx.beginPath(); ctx.moveTo(seg.a[0],seg.a[1]); ctx.lineTo(ex,ey); ctx.stroke();
+      tip=[ex,ey];
     }
     ctx.restore();
-    return prog<1 ? {x:penX, y:y-size*0.16} : null;   // the nib sits at the writing frontier
+    return (progress<1 && tip) ? {x:tip[0], y:tip[1]} : null;       // nib rides the writing frontier
   }
 
   function frame(now){
