@@ -710,7 +710,7 @@ function buildLayers(img){
 
   const _sk=makeSketchStrokes(base);
   const skc2=sketch.getContext('2d'); skc2.clearRect(0,0,W,H);
-  skc2.strokeStyle='rgb(96,94,90)'; skc2.lineWidth=Math.max(1.4,1.8*(W/1000)); skc2.lineCap='round'; skc2.lineJoin='round'; skc2.globalAlpha=0.85;
+  skc2.strokeStyle='rgb(96,94,90)'; skc2.lineWidth=Math.max(1.4,1.8*(W/1000)); skc2.lineCap='round'; skc2.lineJoin='round'; skc2.globalAlpha=0.9;
   for(let j=0;j<_sk.polys.length;j++){ const p=_sk.polys[j]; skc2.beginPath(); skc2.moveTo(p[0][0],p[0][1]); for(let i=1;i<p.length;i++)skc2.lineTo(p[i][0],p[i][1]); skc2.stroke(); }
   skc2.globalAlpha=1;
   return {base, line, shade, sketch, fit, sketchSegs:_sk.segs, sketchTotal:_sk.total};
@@ -778,7 +778,7 @@ async function draw(name, src){
 
   /* the wrong doodle, on the margin next to the drawing */
   const g = GAG[name] || (ART[name]?null:GAG[DEMO]);
-  const gag=offscreen(W,H); const gc=gag.getContext('2d'); gc.lineCap='round'; gc.lineJoin='round'; gc.filter=`blur(${1.0*W/1000}px)`;
+  const gag=offscreen(W,H); const gc=gag.getContext('2d'); gc.lineCap='round'; gc.lineJoin='round';
   let doodle=null;
   if(g&&DOODLES[g.wrong]){ const {ox,oy,iw,ih}=layers.fit; const size=(g.size||GAG_SIZE)*iw, pad=size/2+6; const cx=Math.min(W-pad,Math.max(pad,ox+g.x*iw)), cy=Math.min(H-pad,Math.max(pad,oy+g.y*ih));
     const wob=(i)=>Math.sin(i*12.9898)*0.012;
@@ -788,7 +788,7 @@ async function draw(name, src){
   }
   let drawnTo=0; const crumbs=[];
   function drawDoodleTo(len){
-    gc.strokeStyle='rgb(96,94,90)'; gc.lineWidth=2*S; gc.globalAlpha=0.52;   // same pencil as the rough sketch
+    gc.strokeStyle='rgb(96,94,90)'; gc.lineWidth=Math.max(1.4,1.8*S); gc.globalAlpha=0.9;   // identical pen to the traced sketch beside it
     for(const s of doodle.segs){ if(s.from+s.L<=drawnTo||s.from>=len) continue;
       const t0=Math.max(0,(drawnTo-s.from)/s.L), t1=Math.min(1,(len-s.from)/s.L);
       gc.beginPath(); gc.moveTo(s.a[0]+(s.b[0]-s.a[0])*t0, s.a[1]+(s.b[1]-s.a[1])*t0); gc.lineTo(s.a[0]+(s.b[0]-s.a[0])*t1, s.a[1]+(s.b[1]-s.a[1])*t1); gc.stroke();
