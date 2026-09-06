@@ -445,8 +445,7 @@ const PHASES = [ // seconds
   {key:'sketch',  dur:6,   label:'Rough sketch'},
   {key:'gag',     dur:6,   label:'Hmm… no.'},
   {key:'line',    dur:8.5, label:'Fineliner details'},
-  {key:'marker',  dur:18,  label:'Markers, one pen at a time'},
-  {key:'sign',    dur:2.2, label:'Signing'}
+  {key:'marker',  dur:18,  label:'Markers, one pen at a time'}
 ];
 const TOTAL = PHASES.reduce((a,p)=>a+p.dur,0);
 
@@ -499,7 +498,7 @@ async function draw(name, src){
   }
   function drawCrumbs(){ for(const c of crumbs){ c.y+=c.vy; c.vy+=0.12*S; c.a-=0.018; if(c.a<=0) continue; ctx.globalAlpha=c.a; ctx.fillStyle='#8a8580'; ctx.beginPath(); ctx.ellipse(c.x,c.y,c.r*1.6,c.r,0.6,0,Math.PI*2); ctx.fill(); } ctx.globalAlpha=1; while(crumbs.length&&crumbs[0].a<=0) crumbs.shift(); }
 
-  if (reduced){ ctx.drawImage(layers.base,0,0); sign(name,1); finish(); return; }
+  if (reduced){ ctx.drawImage(layers.base,0,0); finish(); return; }
 
   const layer=offscreen(W,H); const lc=layer.getContext('2d');          // the layer currently being masked in
   const maskC=offscreen(masks.mw,masks.mh); const mc=maskC.getContext('2d');
@@ -608,7 +607,7 @@ async function draw(name, src){
     if(t>=1){
       if(ph.key==='marker'){ im.globalAlpha=1; im.fillStyle='#fff'; im.fillRect(0,0,W,H); }   // every last sliver is inked
       phaseIdx++; phaseStart=now;
-      if(phaseIdx>=PHASES.length){ ctx.drawImage(layers.base,0,0); sign(name,1); finish(); return; }
+      if(phaseIdx>=PHASES.length){ ctx.drawImage(layers.base,0,0); finish(); return; }
       ph=PHASES[phaseIdx]; t=0;
     }
     if(ph.key==='gag' && !doodle){ phaseIdx++; phaseStart=now; ph=PHASES[phaseIdx]; t=0; }
@@ -626,30 +625,10 @@ async function draw(name, src){
       if(t<0.55){ const q=t/0.55; drawDoodleTo(doodle.total*(q*q*(3-2*q))); compose(); drawTool('sketch'); }
       else if(t<0.66){ compose(); cursor.x+=(doodle.cx+doodle.size*0.7-cursor.x)*0.08; cursor.y+=(doodle.cy+doodle.size*0.6-cursor.y)*0.08; drawTool('sketch'); }
       else { erase((t-0.66)/0.34); compose(); drawTool('eraser'); }
-    } else {
-      ctx.drawImage(layers.base,0,0); const s2=t<0.5?2*t*t:-1+(4-2*t)*t; sign(name,s2,true);
     }
     raf=requestAnimationFrame(frame);
   }
   raf=requestAnimationFrame(t=>{start=t;phaseStart=t;frame(t);});
-}
-
-/* hand-lettered signature — whole name fades in (not letter-by-letter), scaled to fit the sheet width so nothing clips */
-function sign(name,progress){
-  const text=name.toUpperCase();
-  const measure=(sz)=>{ ctx.font=`700 ${sz}px Caveat, "Segoe Script", "Bradley Hand", cursive`; const tr=sz*0.22; const ws=[...text].map(ch=>ch===' '?sz*0.42:ctx.measureText(ch).width); return {tr,ws,total:ws.reduce((a,w)=>a+w+tr,0)-tr}; };
-  let size=H*0.085, m=measure(size); const maxW=W*0.9;
-  if(m.total>maxW){ size*=maxW/m.total; m=measure(size); }
-  ctx.font=`700 ${size}px Caveat, "Segoe Script", "Bradley Hand", cursive`;
-  ctx.textBaseline='alphabetic'; ctx.fillStyle='#2b2a27';
-  ctx.globalAlpha=Math.max(0,Math.min(1,progress));
-  let x=(W-m.total)/2, y=H*0.93, seed=7; const r=()=>{seed=(seed*9301+49297)%233280; return seed/233280-0.5;};
-  [...text].forEach((ch,k)=>{
-    const rot=r()*0.06, dy=r()*size*0.06;
-    if(ch!==' '){ ctx.save(); ctx.translate(x,y+dy); ctx.rotate(rot); ctx.fillText(ch,0,0); ctx.restore(); }
-    x+=m.ws[k]+m.tr;
-  });
-  ctx.globalAlpha=1;
 }
 
 function finish(){ stageEl.textContent=''; actionsEl.hidden=false; knot.style.opacity=1; setStitch(1); }
