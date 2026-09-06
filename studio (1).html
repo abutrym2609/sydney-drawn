@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Greater Sydney, drawn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FFFFFF;
+    --ink:#262522;
+    --graphite:#6E6C66;
+    --rule:#DCD9D0;
+    --thread:#D2342A;
+    --hover:#F1EFE7;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;font-size:15px;line-height:1.45}
+  body{min-height:100vh}
+
+  .page{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+  @media (max-width:860px){.page{grid-template-columns:1fr}}
+
+  /* index column */
+  .index{border-right:1px solid var(--rule);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+  @media (max-width:860px){.index{height:auto;position:static;border-right:0;border-bottom:1px solid var(--rule)}}
+  .masthead{padding:28px 24px 18px}
+  .masthead h1{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:30px;line-height:1.05;margin:0 0 10px;letter-spacing:-.01em}
+  .masthead p{margin:0;color:var(--graphite);font-size:14px;max-width:22ch}
+  .search{margin:0 24px 8px;position:relative}
+  .search input{width:100%;border:0;border-bottom:1px solid var(--ink);background:transparent;padding:8px 0;font:inherit;font-size:15px;color:var(--ink);outline:none}
+  .search input::placeholder{color:var(--graphite)}
+  .search input:focus-visible{border-bottom-width:2px}
+  .list{overflow:auto;padding:6px 0 24px;flex:1;scrollbar-width:thin}
+  @media (max-width:860px){.list{max-height:34vh}}
+  .region{padding:14px 24px 4px;color:var(--graphite);font-size:12.5px;font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:15px}
+  .list button{display:block;width:100%;text-align:left;border:0;background:none;font:inherit;font-size:15px;color:var(--ink);padding:5px 24px;cursor:pointer;border-radius:0}
+  .list button:hover{background:var(--hover)}
+  .list button:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+  .list button.on{background:var(--ink);color:var(--paper)}
+  .list button .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--thread);margin-left:8px;vertical-align:middle;opacity:0}
+  .list button.has-art .dot{opacity:1}
+  .empty{padding:18px 24px;color:var(--graphite)}
+
+  /* studio */
+  .studio{padding:36px 40px 48px;display:flex;flex-direction:column;gap:14px;min-width:0}
+  @media (max-width:860px){.studio{padding:20px 16px 32px}}
+  .sheet{position:relative;width:100%;aspect-ratio:1939/811;background:var(--paper)}
+  .sheet canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .prompt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;pointer-events:none;transition:opacity .4s}
+  .prompt.hide{opacity:0}
+  .prompt span{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(22px,3.4vw,44px);color:var(--graphite);max-width:20ch;line-height:1.1}
+
+  /* red thread progress */
+  .thread{height:14px;width:100%}
+  .thread svg{width:100%;height:14px;display:block;overflow:visible}
+  .thread .stitch{stroke:var(--thread);stroke-width:2;fill:none;stroke-dasharray:11 7;stroke-linecap:round}
+  .thread .knot{fill:var(--thread);opacity:0;transition:opacity .3s}
+
+  .foot{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:baseline;justify-content:space-between;color:var(--graphite);font-size:14px;min-height:22px}
+  .foot .stage{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:17px;color:var(--ink)}
+  .foot .stage:empty{display:none}
+  .actions{display:flex;gap:18px}
+  .actions button{border:0;background:none;font:inherit;font-size:14px;color:var(--ink);padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--rule)}
+  .actions button:hover{text-decoration-color:var(--ink)}
+  .actions button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  .actions[hidden]{display:none}
+  .note{color:var(--graphite);font-size:13px}
+
+  @media (prefers-reduced-motion:reduce){.prompt{transition:none}}
+</style>
+</head>
+<body>
+<div class="page">
+  <aside class="index">
+    <div class="masthead">
+      <h1>Greater Sydney,<br>drawn.</h1>
+      <p>Pick a suburb and watch its portrait appear, line by line.</p>
+    </div>
+    <div class="search"><input id="q" type="search" placeholder="Find a suburb" autocomplete="off" aria-label="Find a suburb"></div>
+    <nav class="list" id="list" aria-label="Suburbs"></nav>
+  </aside>
+
+  <main class="studio">
+    <div class="sheet" id="sheet">
+      <canvas id="cv" aria-label="Suburb illustration"></canvas>
+      <div class="prompt" id="prompt"><span>Choose a suburb from the index.</span></div>
+    </div>
+    <div class="thread" aria-hidden="true">
+      <svg viewBox="0 0 1000 14" preserveAspectRatio="none">
+        <path id="stitch" class="stitch" d="M0 7 L0 7"/>
+        <circle id="knot" class="knot" cx="0" cy="7" r="3.5"/>
+      </svg>
+    </div>
+    <div class="foot">
+      <div class="stage" id="stage" aria-live="polite"></div>
+      <div class="actions" id="actions" hidden>
+        <button id="again">Draw it again</button>
+        <button id="save">Save as PNG</button>
+      </div>
+      <div class="note" id="note"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ---------- data ---------- */
+const REGIONS = {
+  "Inner city": ["Sydney","The Rocks","Barangaroo","Millers Point","Dawes Point","Haymarket","Surry Hills","Darlinghurst","Paddington","Chippendale","Ultimo","Pyrmont","Glebe","Redfern","Waterloo","Woolloomooloo","Potts Point","Elizabeth Bay","Rushcutters Bay","Moore Park"],
+  "Eastern suburbs": ["Bondi","Bondi Beach","Bondi Junction","Bronte","Tamarama","Clovelly","Coogee","Maroubra","Randwick","Kensington","Queens Park","Edgecliff","Darling Point","Double Bay","Point Piper","Bellevue Hill","Rose Bay","Vaucluse","Dover Heights"],
+  "Inner west": ["Balmain","Balmain East","Birchgrove","Annandale","Leichhardt","Forest Lodge","Camperdown","Newtown","Enmore","Stanmore","Petersham","Marrickville","Dulwich Hill","Ashfield","Haberfield","Croydon","Croydon Park","Burwood","Concord","Concord West","Five Dock","Drummoyne","Abbotsford","Chiswick","Cabarita","Canada Bay","Breakfast Point"],
+  "Lower north shore": ["Kirribilli","Milsons Point","McMahons Point","Lavender Bay","North Sydney","Waverton","Wollstonecraft","Crows Nest","St Leonards","Neutral Bay","Kurraba Point","Cremorne","Cremorne Point","Cammeray","Mosman","Naremburn","Northbridge","Willoughby","Willoughby East","North Willoughby","Castlecrag","Castle Cove","Middle Cove","Artarmon","Chatswood","Lane Cove","Greenwich","Riverview","Longueville","Linley Point","Woolwich"],
+  "Northern beaches & north": ["Manly","Avalon Beach","Berowra Waters"],
+  "Western Sydney": ["Parramatta","Auburn","Blacktown","Badgerys Creek"],
+  "South & south-west": ["Bankstown","Airds"],
+};
+
+/* Illustration assets: one external WebP per suburb (small file, real art on the live site). */
+const ART = {
+  "Abbotsford": "img/abbotsford.webp",
+  "Airds": "img/airds.webp",
+  "Annandale": "img/annandale.webp",
+  "Artarmon": "img/artarmon.webp",
+  "Ashfield": "img/ashfield.webp",
+  "Auburn": "img/auburn.webp",
+  "Avalon Beach": "img/avalon-beach.webp",
+  "Badgerys Creek": "img/badgerys-creek.webp",
+  "Balmain": "img/balmain.webp",
+  "Balmain East": "img/balmain-east.webp",
+  "Bankstown": "img/bankstown.webp",
+  "Barangaroo": "img/barangaroo.webp",
+  "Bellevue Hill": "img/bellevue-hill.webp",
+  "Berowra Waters": "img/berowra-waters.webp",
+  "Birchgrove": "img/birchgrove.webp",
+  "Blacktown": "img/blacktown.webp",
+  "Bondi": "img/bondi.webp",
+  "Bondi Beach": "img/bondi-beach.webp",
+  "Bondi Junction": "img/bondi-junction.webp",
+  "Breakfast Point": "img/breakfast-point.webp",
+  "Bronte": "img/bronte.webp",
+  "Burwood": "img/burwood.webp",
+  "Cabarita": "img/cabarita.webp",
+  "Cammeray": "img/cammeray.webp",
+  "Camperdown": "img/camperdown.webp",
+  "Canada Bay": "img/canada-bay.webp",
+  "Castle Cove": "img/castle-cove.webp",
+  "Castlecrag": "img/castlecrag.webp",
+  "Chatswood": "img/chatswood.webp",
+  "Chippendale": "img/chippendale.webp",
+  "Chiswick": "img/chiswick.webp",
+  "Clovelly": "img/clovelly.webp",
+  "Concord": "img/concord.webp",
+  "Concord West": "img/concord-west.webp",
+  "Coogee": "img/coogee.webp",
+  "Cremorne": "img/cremorne.webp",
+  "Cremorne Point": "img/cremorne-point.webp",
+  "Crows Nest": "img/crows-nest.webp",
+  "Croydon": "img/croydon.webp",
+  "Croydon Park": "img/croydon-park.webp",
+  "Darling Point": "img/darling-point.webp",
+  "Darlinghurst": "img/darlinghurst.webp",
+  "Dawes Point": "img/dawes-point.webp",
+  "Double Bay": "img/double-bay.webp",
+  "Dover Heights": "img/dover-heights.webp",
+  "Drummoyne": "img/drummoyne.webp",
+  "Dulwich Hill": "img/dulwich-hill.webp",
+  "Edgecliff": "img/edgecliff.webp",
+  "Elizabeth Bay": "img/elizabeth-bay.webp",
+  "Enmore": "img/enmore.webp",
+  "Five Dock": "img/five-dock.webp",
+  "Forest Lodge": "img/forest-lodge.webp",
+  "Glebe": "img/glebe.webp",
+  "Greenwich": "img/greenwich.webp",
+  "Haberfield": "img/haberfield.webp",
+  "Haymarket": "img/haymarket.webp",
+  "Kensington": "img/kensington.webp",
+  "Kirribilli": "img/kirribilli.webp",
+  "Kurraba Point": "img/kurraba-point.webp",
+  "Lane Cove": "img/lane-cove.webp",
+  "Lavender Bay": "img/lavender-bay.webp",
+  "Leichhardt": "img/leichhardt.webp",
+  "Linley Point": "img/linley-point.webp",
+  "Longueville": "img/longueville.webp",
+  "Manly": "img/manly.webp",
+  "Maroubra": "img/maroubra.webp",
+  "Marrickville": "img/marrickville.webp",
+  "McMahons Point": "img/mcmahons-point.webp",
+  "Middle Cove": "img/middle-cove.webp",
+  "Millers Point": "img/millers-point.webp",
+  "Milsons Point": "img/milsons-point.webp",
+  "Moore Park": "img/moore-park.webp",
+  "Mosman": "img/mosman.webp",
+  "Naremburn": "img/naremburn.webp",
+  "Neutral Bay": "img/neutral-bay.webp",
+  "Newtown": "img/newtown.webp",
+  "North Sydney": "img/north-sydney.webp",
+  "North Willoughby": "img/north-willoughby.webp",
+  "Northbridge": "img/northbridge.webp",
+  "Paddington": "img/paddington.webp",
+  "Parramatta": "img/parramatta.webp",
+  "Petersham": "img/petersham.webp",
+  "Point Piper": "img/point-piper.webp",
+  "Potts Point": "img/potts-point.webp",
+  "Pyrmont": "img/pyrmont.webp",
+  "Queens Park": "img/queens-park.webp",
+  "Randwick": "img/randwick.webp",
+  "Redfern": "img/redfern.webp",
+  "Riverview": "img/riverview.webp",
+  "Rose Bay": "img/rose-bay.webp",
+  "Rushcutters Bay": "img/rushcutters-bay.webp",
+  "St Leonards": "img/st-leonards.webp",
+  "Stanmore": "img/stanmore.webp",
+  "Surry Hills": "img/surry-hills.webp",
+  "Sydney": "img/sydney.webp",
+  "Tamarama": "img/tamarama.webp",
+  "The Rocks": "img/the-rocks.webp",
+  "Ultimo": "img/ultimo.webp",
+  "Vaucluse": "img/vaucluse.webp",
+  "Waterloo": "img/waterloo.webp",
+  "Waverton": "img/waverton.webp",
+  "Willoughby": "img/willoughby.webp",
+  "Willoughby East": "img/willoughby-east.webp",
+  "Wollstonecraft": "img/wollstonecraft.webp",
+  "Woolloomooloo": "img/woolloomooloo.webp",
+  "Woolwich": "img/woolwich.webp",
+};
+
+const DEMO = "Sydney";
+
+
+/* The slip: on the rough sketch the artist draws something that simply cannot exist in Sydney,
+   on the blank paper right next to the drawing, then rubs it out. x, y in fractions of the artwork; size as a fraction of its width. */
+const GAG = {
+  "Abbotsford": {x:0.882, y:0.122, wrong:"rhino"},
+  "Airds": {x:0.084, y:0.146, wrong:"brontosaurus"},
+  "Annandale": {x:0.906, y:0.848, wrong:"matterhorn"},
+  "Artarmon": {x:0.108, y:0.872, wrong:"telescope"},
+  "Ashfield": {x:0.488, y:0.064, wrong:"walrus"},
+  "Auburn": {x:0.93, y:0.518, wrong:"flamingo"},
+  "Avalon Beach": {x:0.082, y:0.5, wrong:"fuji"},
+  "Badgerys Creek": {x:0.482, y:0.932, wrong:"sombrero"},
+  "Balmain": {x:0.714, y:0.106, wrong:"ostrich"},
+  "Balmain East": {x:0.286, y:0.088, wrong:"spaceneedle"},
+  "Bankstown": {x:0.818, y:0.912, wrong:"pterodactyl"},
+  "Barangaroo": {x:0.188, y:0.894, wrong:"alien"},
+  "Bellevue Hill": {x:0.93, y:0.318, wrong:"bison"},
+  "Berowra Waters": {x:0.082, y:0.72, wrong:"geyser"},
+  "Birchgrove": {x:0.882, y:0.122, wrong:"alpaca"},
+  "Blacktown": {x:0.084, y:0.146, wrong:"clog"},
+  "Bondi": {x:0.906, y:0.848, wrong:"dogsled"},
+  "Bondi Beach": {x:0.108, y:0.872, wrong:"tornado"},
+  "Bondi Junction": {x:0.488, y:0.064, wrong:"mermaid"},
+  "Breakfast Point": {x:0.93, y:0.518, wrong:"lighthouse"},
+  "Bronte": {x:0.082, y:0.5, wrong:"satellite"},
+  "Burwood": {x:0.482, y:0.932, wrong:"treasurechest"},
+  "Cabarita": {x:0.714, y:0.106, wrong:"arcticfox"},
+  "Cammeray": {x:0.286, y:0.088, wrong:"lion"},
+  "Camperdown": {x:0.818, y:0.912, wrong:"gatewayarch"},
+  "Canada Bay": {x:0.188, y:0.894, wrong:"oasis"},
+  "Castle Cove": {x:0.93, y:0.318, wrong:"wolf"},
+  "Castlecrag": {x:0.082, y:0.72, wrong:"ski"},
+  "Chatswood": {x:0.882, y:0.122, wrong:"igloo"},
+  "Chippendale": {x:0.084, y:0.146, wrong:"icicles"},
+  "Chiswick": {x:0.906, y:0.848, wrong:"crystalball"},
+  "Clovelly": {x:0.108, y:0.872, wrong:"zebra"},
+  "Concord": {x:0.488, y:0.064, wrong:"scorpion"},
+  "Concord West": {x:0.93, y:0.518, wrong:"totempole"},
+  "Coogee": {x:0.082, y:0.5, wrong:"libertystatue"},
+  "Cremorne": {x:0.482, y:0.932, wrong:"seal"},
+  "Cremorne Point": {x:0.714, y:0.106, wrong:"stonehenge"},
+  "Crows Nest": {x:0.286, y:0.088, wrong:"mapleleaf"},
+  "Croydon": {x:0.818, y:0.912, wrong:"wizardhat"},
+  "Croydon Park": {x:0.188, y:0.894, wrong:"submarine"},
+  "Darling Point": {x:0.93, y:0.318, wrong:"sabretooth"},
+  "Darlinghurst": {x:0.082, y:0.72, wrong:"pisa"},
+  "Dawes Point": {x:0.882, y:0.122, wrong:"giraffe"},
+  "Double Bay": {x:0.084, y:0.146, wrong:"tajmahal"},
+  "Dover Heights": {x:0.906, y:0.848, wrong:"dragon"},
+  "Drummoyne": {x:0.108, y:0.872, wrong:"bigben"},
+  "Dulwich Hill": {x:0.488, y:0.064, wrong:"bedouintent"},
+  "Edgecliff": {x:0.93, y:0.518, wrong:"colosseum"},
+  "Elizabeth Bay": {x:0.082, y:0.5, wrong:"yeti"},
+  "Enmore": {x:0.482, y:0.932, wrong:"nessie"},
+  "Five Dock": {x:0.714, y:0.106, wrong:"reindeer"},
+  "Forest Lodge": {x:0.286, y:0.088, wrong:"dune"},
+  "Glebe": {x:0.818, y:0.912, wrong:"magiccarpet"},
+  "Greenwich": {x:0.188, y:0.894, wrong:"panda"},
+  "Haberfield": {x:0.93, y:0.318, wrong:"vikingship"},
+  "Haymarket": {x:0.082, y:0.72, wrong:"robot"},
+  "Kensington": {x:0.882, y:0.122, wrong:"towerbridge"},
+  "Kirribilli": {x:0.084, y:0.146, wrong:"moai"},
+  "Kurraba Point": {x:0.906, y:0.848, wrong:"cuckooclock"},
+  "Lane Cove": {x:0.108, y:0.872, wrong:"ufo"},
+  "Lavender Bay": {x:0.488, y:0.064, wrong:"meerkat"},
+  "Leichhardt": {x:0.93, y:0.518, wrong:"moonlander"},
+  "Linley Point": {x:0.082, y:0.5, wrong:"zeppelin"},
+  "Longueville": {x:0.482, y:0.932, wrong:"rocket"},
+  "Manly": {x:0.714, y:0.106, wrong:"camel"},
+  "Maroubra": {x:0.286, y:0.088, wrong:"coconuttree"},
+  "Marrickville": {x:0.818, y:0.912, wrong:"gondola"},
+  "McMahons Point": {x:0.188, y:0.894, wrong:"toucan"},
+  "Middle Cove": {x:0.93, y:0.318, wrong:"eiffel"},
+  "Millers Point": {x:0.082, y:0.72, wrong:"tulip"},
+  "Milsons Point": {x:0.882, y:0.122, wrong:"moose"},
+  "Moore Park": {x:0.084, y:0.146, wrong:"snowglobe"},
+  "Mosman": {x:0.906, y:0.848, wrong:"unicorn"},
+  "Naremburn": {x:0.108, y:0.872, wrong:"trex"},
+  "Neutral Bay": {x:0.488, y:0.064, wrong:"llama"},
+  "Newtown": {x:0.93, y:0.518, wrong:"pagoda"},
+  "North Sydney": {x:0.082, y:0.5, wrong:"mitten"},
+  "North Willoughby": {x:0.482, y:0.932, wrong:"brandenburggate"},
+  "Northbridge": {x:0.714, y:0.106, wrong:"tiger"},
+  "Paddington": {x:0.286, y:0.088, wrong:"comet"},
+  "Parramatta": {x:0.818, y:0.912, wrong:"volcano"},
+  "Petersham": {x:0.188, y:0.894, wrong:"elephant"},
+  "Point Piper": {x:0.93, y:0.318, wrong:"sphinx"},
+  "Potts Point": {x:0.082, y:0.72, wrong:"astronaut"},
+  "Pyrmont": {x:0.882, y:0.122, wrong:"gorilla"},
+  "Queens Park": {x:0.084, y:0.146, wrong:"christredeemer"},
+  "Randwick": {x:0.906, y:0.848, wrong:"greatwall"},
+  "Redfern": {x:0.108, y:0.872, wrong:"snowflake"},
+  "Riverview": {x:0.488, y:0.064, wrong:"husky"},
+  "Rose Bay": {x:0.93, y:0.518, wrong:"oniondome"},
+  "Rushcutters Bay": {x:0.082, y:0.5, wrong:"parthenon"},
+  "St Leonards": {x:0.482, y:0.932, wrong:"sledge"},
+  "Stanmore": {x:0.714, y:0.106, wrong:"mammoth"},
+  "Surry Hills": {x:0.286, y:0.088, wrong:"pirateship"},
+  "Sydney": {x:0.818, y:0.912, wrong:"hippo"},
+  "Tamarama": {x:0.188, y:0.894, wrong:"windmill"},
+  "The Rocks": {x:0.93, y:0.318, wrong:"snowman"},
+  "Ultimo": {x:0.082, y:0.72, wrong:"polarbear"},
+  "Vaucluse": {x:0.882, y:0.122, wrong:"sleigh"},
+  "Waterloo": {x:0.084, y:0.146, wrong:"tumbleweed"},
+  "Waverton": {x:0.906, y:0.848, wrong:"sloth"},
+  "Willoughby": {x:0.108, y:0.872, wrong:"palmtree"},
+  "Willoughby East": {x:0.488, y:0.064, wrong:"aurora"},
+  "Wollstonecraft": {x:0.93, y:0.518, wrong:"penguin"},
+  "Woolloomooloo": {x:0.082, y:0.5, wrong:"hotairballoon"},
+  "Woolwich": {x:0.482, y:0.932, wrong:"pyramid"}
+};
+const GAG_SIZE = 0.14;
+
+/* Doodle library: simple things that cannot be in Sydney at all — polylines in a unit box, drawn in pencil */
+const circle=(cx,cy,r,n=28,a0=0,a1=Math.PI*2)=>{ const p=[]; for(let i=0;i<=n;i++){ const a=a0+(a1-a0)*i/n; p.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r]); } return p; };
+const ell=(cx,cy,rx,ry,n=28,a0=0,a1=Math.PI*2)=>{ const p=[]; for(let i=0;i<=n;i++){ const a=a0+(a1-a0)*i/n; p.push([cx+Math.cos(a)*rx,cy+Math.sin(a)*ry]); } return p; };
+const DOODLES = {
+  // ===== Original 15 (kept exactly) =====
+  eiffel:   [ [[.08,.95],[.3,.95],[.4,.6],[.46,.3],[.5,.05],[.54,.3],[.6,.6],[.7,.95],[.92,.95]], [[.3,.95],[.4,.78],[.5,.72],[.6,.78],[.7,.95]], [[.37,.62],[.63,.62]], [[.42,.4],[.58,.4]], [[.45,.28],[.55,.28]], [[.38,.7],[.62,.7]] ],
+  pyramid:  [ [[.05,.85],[.5,.15],[.95,.85],[.05,.85]], [[.5,.15],[.62,.85]], [[.62,.85],[.05,.85]], circle(.85,.2,.08), [[.75,.06],[.78,.1]],[[.95,.06],[.92,.1]],[[.97,.2],[1.0,.2]],[[.7,.2],[.73,.2]] ],
+  igloo:    [ circle(.5,.75,.42,32,Math.PI,Math.PI*2), [[.08,.75],[.92,.75]], [[.12,.55],[.88,.55]], [[.24,.4],[.76,.4]], [[.38,.75],[.38,.55]],[[.62,.75],[.62,.55]], [[.5,.55],[.5,.4]], [[.25,.55],[.25,.4]], [[.75,.55],[.75,.4]], circle(.5,.75,.16,16,Math.PI,Math.PI*2), [[.34,.75],[.66,.75]] ],
+  snowman:  [ circle(.5,.76,.22), circle(.5,.45,.16), circle(.5,.2,.12), [[.36,.1],[.64,.1]], [[.4,.1],[.4,0],[.6,0],[.6,.1]], circle(.46,.18,.015,8), circle(.54,.18,.015,8), [[.5,.22],[.64,.25],[.5,.27]], [[.34,.42],[.1,.3]], [[.66,.42],[.9,.3]], circle(.5,.42,.015,8), circle(.5,.5,.015,8), circle(.5,.7,.015,8), circle(.5,.8,.015,8) ],
+  camel:    [ [[.12,.62],[.14,.5],[.22,.36],[.34,.3],[.44,.4],[.52,.3],[.64,.3],[.74,.42],[.8,.6]], [[.12,.62],[.8,.62]], [[.8,.6],[.84,.4],[.86,.25],[.92,.2],[.98,.24],[.97,.3],[.9,.32],[.9,.62]], circle(.9,.24,.012,8), [[.2,.62],[.18,.92]], [[.3,.62],[.3,.92]], [[.64,.62],[.64,.92]], [[.76,.62],[.78,.92]], [[.12,.62],[.04,.7]] ],
+  cactus:   [ [[.42,.85],[.42,.15],[.5,.07],[.58,.15],[.58,.85]], [[.42,.5],[.3,.5],[.22,.44],[.22,.25],[.28,.18],[.34,.25],[.34,.42],[.42,.42]], [[.58,.62],[.68,.62],[.76,.56],[.76,.32],[.7,.25],[.64,.32],[.64,.54],[.58,.54]], [[.28,.85],[.72,.85],[.68,.98],[.32,.98],[.28,.85]] ],
+  penguin:  [ ell(.5,.6,.28,.36), ell(.5,.66,.17,.26), circle(.5,.2,.14), circle(.44,.17,.02,8), circle(.56,.17,.02,8), [[.5,.22],[.58,.28],[.42,.28],[.5,.22]], [[.22,.5],[.06,.72],[.22,.8]], [[.78,.5],[.94,.72],[.78,.8]], [[.4,.95],[.28,1.0],[.44,1.0]], [[.6,.95],[.72,1.0],[.56,1.0]] ],
+  volcano:  [ [[.05,.9],[.36,.32],[.64,.32],[.95,.9],[.05,.9]], [[.36,.32],[.45,.4],[.5,.34],[.56,.4],[.64,.32]], [[.5,.36],[.46,.5],[.54,.62],[.5,.9]], [[.45,.4],[.34,.55],[.38,.72]], [[.56,.4],[.66,.58],[.62,.74]], [[.4,.3],[.35,.2],[.42,.12],[.5,.18],[.56,.08],[.64,.12],[.66,.22],[.6,.3]] ],
+  bigben:   [ [[.35,.95],[.35,.35],[.65,.35],[.65,.95]], [[.3,.35],[.7,.35],[.5,.05],[.3,.35]], circle(.5,.5,.1), [[.5,.5],[.5,.44]], [[.5,.5],[.55,.52]], [[.4,.7],[.6,.7]], [[.4,.8],[.6,.8]], [[.43,.7],[.43,.8]],[[.5,.7],[.5,.8]],[[.57,.7],[.57,.8]], [[.5,.05],[.5,-.02]], [[.2,.95],[.8,.95]] ],
+  pisa:     [ [[.3,.95],[.42,.15],[.68,.2],[.6,.95],[.3,.95]], [[.44,.3],[.66,.34]], [[.41,.45],[.65,.49]], [[.38,.6],[.63,.64]], [[.35,.75],[.61,.79]], [[.44,.15],[.5,.05],[.68,.1],[.68,.2]], [[.2,.95],[.8,.95]] ],
+  snowflake:[ [[.5,.05],[.5,.95]], [[.11,.275],[.89,.725]], [[.11,.725],[.89,.275]], [[.5,.15],[.42,.22]],[[.5,.15],[.58,.22]], [[.5,.85],[.42,.78]],[[.5,.85],[.58,.78]], [[.2,.32],[.28,.24]],[[.2,.32],[.3,.38]], [[.8,.68],[.72,.76]],[[.8,.68],[.7,.62]], [[.2,.68],[.28,.76]],[[.2,.68],[.3,.62]], [[.8,.32],[.72,.24]],[[.8,.32],[.7,.38]] ],
+  ufo:      [ ell(.5,.55,.44,.13), circle(.5,.46,.2,24,Math.PI,Math.PI*2), circle(.3,.55,.025,8), circle(.5,.6,.025,8), circle(.7,.55,.025,8), [[.34,.67],[.15,.98]], [[.66,.67],[.85,.98]] ],
+  iceberg:  [ [[.3,.55],[.45,.15],[.55,.3],[.68,.1],[.85,.55]], [[.05,.55],[.95,.55]], [[.3,.55],[.2,.75],[.5,.95],[.8,.72],[.85,.55]], [[.05,.62],[.15,.58],[.25,.63]], [[.75,.64],[.85,.6],[.95,.65]] ],
+  moai:     [ [[.35,.95],[.3,.5],[.34,.2],[.45,.08],[.62,.08],[.72,.2],[.7,.5],[.65,.95]], [[.3,.42],[.4,.4],[.5,.44],[.6,.4],[.7,.42]], circle(.42,.5,.03,10), circle(.6,.5,.03,10), [[.5,.5],[.46,.7],[.56,.72]], [[.42,.82],[.6,.82]], [[.15,.95],[.85,.95]] ],
+  windmill: [ [[.32,.95],[.4,.45],[.6,.45],[.68,.95],[.32,.95]], [[.38,.45],[.5,.3],[.62,.45]], [[.5,.35],[.75,.1]], [[.5,.35],[.25,.1]], [[.5,.35],[.75,.6]], [[.5,.35],[.25,.6]], [[.62,.22],[.72,.14],[.66,.24]], [[.38,.22],[.28,.14],[.34,.24]], [[.45,.95],[.45,.78],[.55,.78],[.55,.95]], [[.15,.95],[.85,.95]] ],
+
+  // ===== Arctic / cold =====
+  polarbear: [ [[.1,.52],[.14,.38],[.28,.32],[.4,.34],[.5,.42],[.62,.44],[.72,.4],[.82,.42],[.88,.5]], [[.88,.5],[.86,.56],[.78,.57]], circle(.83,.47,.009,8), circle(.66,.35,.04), [[.78,.57],[.74,.66]], [[.1,.52],[.1,.68]], [[.1,.68],[.74,.68]], [[.16,.68],[.16,.84]], [[.3,.68],[.3,.84]], [[.58,.68],[.58,.84]], [[.72,.66],[.72,.84]], [[.1,.56],[.05,.58]] ],
+  seal:      [ [[.16,.68],[.2,.55],[.35,.5],[.55,.5],[.68,.45],[.74,.38]], [[.16,.68],[.3,.75],[.55,.75],[.7,.66]], circle(.79,.33,.1), circle(.82,.29,.012,8), [[.86,.35],[.94,.37]], [[.86,.4],[.94,.43]], [[.16,.68],[.06,.6],[.1,.72]], [[.58,.73],[.64,.85],[.7,.73]] ],
+  walrus:    [ [[.16,.68],[.2,.55],[.4,.5],[.6,.5],[.72,.46]], [[.16,.68],[.3,.78],[.6,.78],[.72,.62]], circle(.76,.4,.14), circle(.72,.36,.012,8), circle(.8,.36,.012,8), ell(.76,.47,.09,.06), [[.73,.5],[.71,.72]], [[.79,.5],[.81,.72]], [[.87,.42],[.95,.44]], [[.87,.47],[.95,.51]], [[.55,.76],[.6,.86],[.66,.76]] ],
+  reindeer:  [ ell(.45,.52,.24,.13), [[.64,.5],[.72,.36]], circle(.76,.3,.08), [[.8,.32],[.9,.4]], [[.72,.24],[.66,.12],[.58,.08]], [[.72,.24],[.78,.1],[.86,.06]], [[.7,.18],[.62,.16]], [[.76,.16],[.84,.14]], [[.3,.64],[.28,.86]], [[.4,.64],[.4,.86]], [[.56,.64],[.57,.86]], [[.64,.62],[.65,.86]], [[.21,.5],[.13,.46]] ],
+  sleigh:    [ [[.2,.42],[.18,.66],[.72,.66],[.8,.44]], [[.8,.44],[.9,.36],[.96,.44],[.9,.5],[.83,.46]], [[.2,.42],[.34,.36],[.56,.36],[.62,.4]], [[.14,.72],[.86,.72]], [[.14,.72],[.06,.66],[.1,.6]], [[.28,.66],[.26,.72]], [[.7,.66],[.72,.72]] ],
+  ski:       [ [[.15,.88],[.62,.14]], [[.2,.9],[.67,.16]], [[.62,.14],[.7,.13]], [[.67,.16],[.7,.13]], [[.85,.88],[.38,.14]], [[.8,.9],[.33,.16]], [[.38,.14],[.3,.13]], [[.33,.16],[.3,.13]], [[.34,.24],[.42,.84]], [[.66,.24],[.58,.84]], circle(.4,.78,.045,10), circle(.6,.78,.045,10) ],
+  husky:     [ ell(.45,.56,.26,.13), [[.66,.52],[.74,.4]], circle(.78,.36,.09), [[.72,.3],[.7,.2],[.76,.28]], [[.84,.3],[.86,.2],[.8,.28]], [[.82,.4],[.9,.44]], circle(.88,.44,.01,8), [[.3,.68],[.28,.86]], [[.4,.68],[.4,.86]], [[.54,.68],[.55,.86]], [[.62,.68],[.63,.86]], [[.2,.52],[.12,.42],[.18,.38],[.24,.46]] ],
+  arcticfox: [ ell(.45,.6,.2,.12), [[.6,.56],[.68,.45]], circle(.72,.41,.09), [[.66,.35],[.62,.24],[.7,.33]], [[.78,.35],[.82,.24],[.74,.33]], [[.77,.44],[.87,.46],[.77,.49]], circle(.74,.4,.01,8), [[.32,.7],[.3,.86]], [[.42,.7],[.42,.86]], [[.54,.7],[.55,.86]], [[.28,.58],[.14,.52],[.09,.64],[.2,.68]] ],
+  mitten:    [ [[.4,.9],[.38,.52],[.4,.36],[.5,.28],[.62,.32],[.66,.46],[.66,.9]], [[.38,.5],[.28,.46],[.24,.54],[.3,.6],[.38,.58]], [[.4,.82],[.66,.82]], [[.4,.9],[.66,.9]] ],
+  icicles:   [ [[.1,.24],[.9,.24]], [[.15,.24],[.2,.58],[.25,.24]], [[.28,.24],[.34,.74],[.4,.24]], [[.43,.24],[.47,.48],[.51,.24]], [[.54,.24],[.6,.82],[.66,.24]], [[.69,.24],[.73,.54],[.77,.24]], [[.8,.24],[.85,.66],[.9,.24]] ],
+  aurora:    [ [[.08,.3],[.28,.2],[.5,.28],[.72,.18],[.92,.28]], [[.08,.42],[.28,.32],[.5,.4],[.72,.3],[.92,.4]], [[.1,.54],[.3,.46],[.5,.52],[.72,.44],[.9,.52]], [[.28,.2],[.3,.46]], [[.5,.28],[.5,.52]], [[.72,.18],[.72,.44]], [[.05,.82],[.95,.82]], [[.2,.82],[.24,.68],[.28,.82]], [[.6,.82],[.64,.66],[.68,.82]], [[.4,.12],[.42,.12]], [[.85,.62],[.87,.62]] ],
+  snowglobe: [ circle(.5,.45,.34,28,Math.PI*1.14,Math.PI*2.86), [[.25,.72],[.75,.72]], [[.22,.72],[.78,.72],[.72,.88],[.28,.88],[.22,.72]], [[.42,.68],[.5,.5],[.58,.68]], [[.5,.5],[.5,.44]], circle(.35,.4,.008,6), circle(.62,.35,.008,6), circle(.55,.56,.008,6), circle(.4,.55,.008,6) ],
+  yeti:      [ [[.35,.9],[.31,.5],[.3,.35],[.4,.25],[.5,.22],[.6,.25],[.7,.35],[.69,.5],[.65,.9]], circle(.44,.34,.012,8), circle(.56,.34,.012,8), [[.44,.44],[.5,.48],[.56,.44]], [[.32,.4],[.16,.5],[.14,.62]], [[.68,.4],[.84,.5],[.86,.62]], [[.4,.9],[.42,.76]], [[.6,.9],[.58,.76]], [[.3,.4],[.24,.34]], [[.7,.4],[.76,.34]] ],
+  mammoth:   [ ell(.46,.52,.28,.18), [[.2,.5],[.2,.82]], [[.32,.55],[.32,.82]], [[.58,.55],[.58,.82]], [[.7,.5],[.7,.82]], circle(.77,.4,.15), [[.87,.46],[.91,.6],[.87,.74],[.91,.82]], [[.85,.52],[.79,.68],[.7,.72],[.65,.62]], [[.91,.52],[.87,.7],[.79,.76]], [[.2,.34],[.46,.28],[.66,.34]], [[.2,.34],[.12,.4]] ],
+  sabretooth:[ ell(.45,.54,.26,.14), [[.64,.52],[.72,.42]], circle(.77,.38,.1), [[.7,.32],[.68,.26],[.73,.31]], [[.82,.32],[.86,.26],[.8,.31]], [[.74,.47],[.73,.6]], [[.8,.47],[.81,.6]], circle(.74,.36,.01,8), circle(.8,.36,.01,8), [[.3,.68],[.28,.86]], [[.4,.68],[.4,.86]], [[.54,.68],[.55,.86]], [[.62,.68],[.63,.86]], [[.2,.5],[.1,.42]] ],
+  sledge:    [ [[.15,.55],[.75,.55]], [[.75,.55],[.88,.5],[.92,.4],[.84,.42],[.78,.5]], [[.2,.55],[.2,.68]], [[.4,.55],[.4,.68]], [[.6,.55],[.6,.68]], [[.72,.55],[.72,.68]], [[.12,.72],[.82,.72]], [[.12,.72],[.06,.66],[.1,.6]] ],
+  dogsled:   [ ell(.24,.6,.14,.08), circle(.09,.55,.055), [[.06,.5],[.05,.44],[.09,.49]], [[.04,.56],[-.01,.57]], circle(.07,.54,.006,6), [[.16,.67],[.15,.8]], [[.3,.67],[.31,.8]], [[.38,.56],[.42,.6]], [[.42,.6],[.56,.62]], [[.56,.62],[.6,.66],[.9,.66]], [[.6,.66],[.6,.8]], [[.9,.66],[.9,.8]], [[.55,.8],[.95,.8]], [[.9,.66],[.9,.54],[.82,.54]] ],
+  iceskate:  [ [[.34,.2],[.34,.6],[.72,.6],[.72,.36],[.6,.28],[.6,.2],[.34,.2]], [[.28,.62],[.76,.62]], [[.28,.68],[.3,.74],[.72,.74],[.78,.66]], [[.28,.68],[.28,.62]], [[.78,.66],[.76,.62]], [[.42,.28],[.52,.32]], [[.42,.36],[.52,.4]], [[.42,.44],[.52,.48]] ],
+
+  // ===== Desert / Middle East =====
+  sphinx:    [ [[.05,.82],[.95,.82]], [[.42,.4],[.6,.36],[.8,.42],[.88,.6],[.86,.82]], [[.28,.5],[.28,.82]], [[.05,.78],[.28,.78]], [[.05,.78],[.05,.82]], [[.08,.72],[.28,.72]], [[.28,.5],[.24,.28],[.32,.14],[.42,.14],[.5,.28],[.46,.5]], [[.31,.3],[.31,.5],[.43,.5],[.43,.3]], circle(.34,.36,.012,8), circle(.4,.36,.012,8), [[.35,.44],[.39,.44]], [[.28,.5],[.31,.5]], [[.43,.5],[.46,.5]] ],
+  oasis:     [ ell(.5,.82,.35,.07), [[.35,.8],[.32,.46]], [[.32,.46],[.2,.42],[.13,.46]], [[.32,.46],[.24,.35],[.16,.34]], [[.32,.46],[.34,.32],[.3,.25]], [[.32,.46],[.44,.37],[.52,.37]], [[.62,.81],[.66,.53]], [[.66,.53],[.56,.5]], [[.66,.53],[.6,.42]], [[.66,.53],[.68,.4]], [[.66,.53],[.78,.48]], [[.66,.53],[.79,.56]] ],
+  scorpion:  [ [[.34,.55],[.62,.55]], [[.34,.53],[.24,.45],[.17,.4]], [[.17,.4],[.11,.44],[.15,.5],[.21,.48]], [[.34,.58],[.25,.63],[.19,.67]], [[.19,.67],[.13,.63],[.15,.57]], [[.4,.58],[.36,.68]], [[.47,.58],[.45,.7]], [[.54,.58],[.54,.7]], [[.4,.52],[.36,.42]], [[.47,.52],[.45,.4]], [[.54,.52],[.54,.4]], [[.62,.55],[.73,.5],[.81,.4],[.81,.28],[.73,.23]], [[.73,.23],[.67,.25],[.69,.19]] ],
+  dune:      [ [[.05,.6],[.35,.45],[.6,.55],[.95,.42]], [[.05,.8],[.4,.68],[.7,.78],[.95,.66]], circle(.75,.28,.1), [[.75,.13],[.75,.09]], [[.9,.28],[.95,.28]], [[.6,.28],[.55,.28]], [[.86,.18],[.9,.14]], [[.64,.38],[.6,.42]] ],
+  bedouintent:[ [[.1,.8],[.25,.4],[.5,.5],[.75,.4],[.9,.8]], [[.25,.4],[.25,.32]], [[.75,.4],[.75,.32]], [[.08,.8],[.92,.8]], [[.4,.8],[.42,.56],[.5,.5],[.58,.56],[.6,.8]], [[.25,.4],[.5,.44],[.75,.4]] ],
+  tumbleweed:[ circle(.5,.55,.28,20), [[.26,.42],[.62,.7]], [[.7,.36],[.34,.72]], [[.28,.6],[.72,.5]], [[.5,.3],[.52,.82]], [[.3,.5],[.68,.66]], [[.4,.32],[.6,.78]], [[.1,.86],[.9,.86]], [[.16,.76],[.05,.75]], [[.2,.66],[.08,.63]] ],
+  genielamp: [ ell(.45,.62,.27,.13), [[.2,.6],[.09,.55],[.15,.5],[.24,.55]], [[.7,.6],[.83,.53]], [[.7,.66],[.85,.66],[.8,.58]], [[.4,.5],[.4,.44],[.52,.44],[.52,.5]], circle(.46,.42,.03), [[.46,.39],[.4,.31],[.5,.25],[.42,.17],[.52,.11]] ],
+  magiccarpet:[ [[.15,.45],[.35,.35],[.65,.35],[.85,.45],[.7,.6],[.3,.6],[.15,.45]], [[.22,.46],[.4,.4],[.6,.4],[.76,.46]], [[.28,.55],[.4,.5],[.6,.5],[.7,.55]], [[.15,.45],[.09,.5]], [[.18,.5],[.12,.56]], [[.85,.45],[.91,.5]], [[.82,.5],[.88,.56]], [[.05,.7],[.2,.66]], [[.8,.7],[.95,.66]] ],
+
+  // ===== Landmarks =====
+  colosseum: [ [[.1,.75],[.1,.4],[.16,.32]], [[.16,.32],[.5,.24],[.84,.32]], [[.84,.32],[.9,.4],[.9,.75]], [[.1,.75],[.9,.75]], circle(.25,.5,.05,8,Math.PI,Math.PI*2), circle(.4,.47,.05,8,Math.PI,Math.PI*2), circle(.55,.47,.05,8,Math.PI,Math.PI*2), circle(.7,.5,.05,8,Math.PI,Math.PI*2), circle(.3,.65,.045,8,Math.PI,Math.PI*2), circle(.5,.64,.045,8,Math.PI,Math.PI*2), circle(.68,.65,.045,8,Math.PI,Math.PI*2), [[.84,.32],[.8,.27],[.82,.36]] ],
+  libertystatue:[ [[.58,.4],[.65,.2],[.7,.09]], [[.66,.07],[.62,.01],[.71,-.01],[.73,.06],[.66,.08]], [[.62,.12],[.74,.12]], circle(.45,.3,.07), [[.4,.25],[.38,.17]], [[.44,.23],[.44,.14]], [[.48,.23],[.5,.14]], [[.51,.26],[.57,.19]], [[.4,.28],[.33,.24]], [[.4,.36],[.34,.86],[.58,.86],[.52,.4]], [[.4,.5],[.3,.55]], [[.3,.55],[.28,.7],[.37,.68],[.37,.53]], [[.34,.86],[.58,.86]] ],
+  tajmahal:  [ [[.2,.85],[.2,.55],[.8,.55],[.8,.85],[.2,.85]], [[.4,.55],[.4,.4],[.44,.3],[.5,.24],[.56,.3],[.6,.4],[.6,.55]], [[.5,.24],[.5,.16]], [[.48,.19],[.52,.19]], circle(.5,.62,.08,10,Math.PI,Math.PI*2), [[.42,.62],[.42,.72]], [[.58,.62],[.58,.72]], [[.28,.55],[.28,.46],[.32,.42],[.36,.46],[.36,.55]], [[.64,.55],[.64,.46],[.68,.42],[.72,.46],[.72,.55]], [[.12,.85],[.13,.42]], [[.1,.42],[.16,.42]], circle(.13,.38,.02), [[.87,.85],[.88,.42]], [[.84,.42],[.9,.42]], circle(.88,.38,.02), [[.15,.88],[.85,.88]] ],
+  pagoda:    [ [[.3,.35],[.5,.22],[.7,.35]], [[.28,.35],[.34,.32],[.66,.32],[.72,.35]], [[.26,.35],[.32,.3]], [[.74,.35],[.68,.3]], [[.25,.55],[.5,.42],[.75,.55]], [[.23,.55],[.29,.52],[.71,.52],[.77,.55]], [[.21,.55],[.27,.5]], [[.79,.55],[.73,.5]], [[.2,.75],[.5,.62],[.8,.75]], [[.18,.75],[.24,.72],[.76,.72],[.82,.75]], [[.16,.75],[.22,.7]], [[.84,.75],[.78,.7]], [[.5,.22],[.5,.16]], [[.42,.55],[.42,.62]], [[.58,.55],[.58,.62]], [[.38,.75],[.38,.9]], [[.62,.75],[.62,.9]], [[.34,.9],[.66,.9]] ],
+  greatwall: [ [[.05,.7],[.2,.5],[.4,.6],[.6,.4],[.8,.55],[.95,.4]], [[.05,.85],[.2,.66],[.4,.75],[.6,.56],[.8,.7],[.95,.56]], [[.2,.5],[.2,.45],[.26,.45],[.26,.49]], [[.4,.6],[.4,.55],[.46,.55],[.46,.59]], [[.5,.5],[.5,.32],[.66,.32],[.66,.48]], [[.52,.32],[.52,.27]], [[.58,.32],[.58,.27]], [[.64,.32],[.64,.27]], [[.49,.32],[.67,.32]] ],
+  stonehenge:[ [[.15,.85],[.15,.4],[.3,.4],[.3,.85]], [[.36,.85],[.36,.45],[.48,.45],[.48,.85]], [[.12,.4],[.52,.4],[.52,.32],[.12,.32],[.12,.4]], [[.62,.85],[.62,.42],[.74,.42],[.74,.85]], [[.58,.42],[.78,.42],[.78,.34],[.58,.34],[.58,.42]], [[.82,.85],[.82,.5],[.9,.48]], [[.05,.85],[.95,.85]] ],
+  arcdetriomphe:[ [[.2,.9],[.2,.35],[.8,.35],[.8,.9]], [[.15,.35],[.85,.35],[.85,.3],[.15,.3],[.15,.35]], circle(.5,.55,.18,12,Math.PI,Math.PI*2), [[.32,.55],[.32,.9]], [[.68,.55],[.68,.9]], [[.2,.9],[.8,.9]], [[.26,.42],[.26,.6]], [[.74,.42],[.74,.6]] ],
+  oniondome: [ [[.4,.55],[.38,.42],[.42,.3],[.5,.22],[.58,.3],[.62,.42],[.6,.55]], [[.5,.22],[.5,.14]], [[.5,.14],[.5,.07]], [[.46,.11],[.54,.11]], [[.4,.55],[.6,.55],[.6,.85],[.4,.85],[.4,.55]], [[.2,.65],[.19,.55],[.23,.47],[.26,.44],[.29,.47],[.32,.55],[.32,.65]], [[.26,.44],[.26,.38]], [[.24,.4],[.28,.4]], [[.2,.65],[.32,.65],[.32,.85],[.2,.85]], [[.68,.65],[.67,.55],[.71,.47],[.74,.44],[.77,.47],[.8,.55],[.8,.65]], [[.74,.44],[.74,.38]], [[.72,.4],[.76,.4]], [[.68,.65],[.8,.65],[.8,.85],[.68,.85]], [[.15,.85],[.85,.85]] ],
+  fuji:      [ [[.1,.85],[.35,.4],[.42,.35],[.5,.32],[.58,.35],[.65,.4],[.9,.85]], [[.35,.4],[.4,.46],[.45,.4],[.5,.47],[.55,.4],[.6,.46],[.65,.4]], [[.1,.85],[.9,.85]], [[.15,.62],[.28,.6],[.34,.64]], [[.68,.56],[.8,.54],[.86,.58]] ],
+  matterhorn:[ [[.1,.9],[.44,.3],[.5,.12],[.56,.28],[.64,.22],[.9,.9]], [[.5,.12],[.44,.22],[.5,.26],[.56,.2]], [[.35,.5],[.42,.46]], [[.6,.45],[.68,.5]], [[.1,.9],[.9,.9]] ],
+  towerbridge:[ [[.25,.85],[.25,.35],[.35,.35],[.35,.85]], [[.65,.85],[.65,.35],[.75,.35],[.75,.85]], [[.23,.35],[.3,.22],[.37,.35]], [[.63,.35],[.7,.22],[.77,.35]], [[.3,.22],[.3,.16]], [[.7,.22],[.7,.16]], [[.35,.42],[.65,.42]], [[.35,.48],[.65,.48]], [[.25,.5],[.1,.7],[.05,.7]], [[.75,.5],[.9,.7],[.95,.7]], [[.05,.72],[.95,.72]], [[.42,.72],[.5,.64],[.58,.72]] ],
+  parthenon: [ [[.1,.35],[.5,.15],[.9,.35]], [[.1,.35],[.9,.35]], [[.12,.42],[.88,.42]], [[.18,.42],[.18,.8]], [[.3,.42],[.3,.8]], [[.42,.42],[.42,.8]], [[.54,.42],[.54,.8]], [[.66,.42],[.66,.8]], [[.78,.42],[.78,.8]], [[.1,.8],[.9,.8]], [[.08,.85],[.92,.85]] ],
+  gatewayarch:[ [[.2,.9],[.24,.55],[.35,.3],[.5,.2],[.65,.3],[.76,.55],[.8,.9]], [[.28,.9],[.32,.58],[.4,.38],[.5,.3],[.6,.38],[.68,.58],[.72,.9]], [[.2,.9],[.28,.9]], [[.72,.9],[.8,.9]] ],
+  spaceneedle:[ [[.45,.9],[.47,.5]], [[.55,.9],[.53,.5]], ell(.5,.45,.18,.06), [[.35,.44],[.4,.36],[.6,.36],[.65,.44]], [[.47,.36],[.47,.28]], [[.53,.36],[.53,.28]], [[.5,.28],[.5,.16]], [[.45,.9],[.39,.9]], [[.55,.9],[.61,.9]], [[.46,.7],[.54,.7]], [[.35,.9],[.65,.9]] ],
+  brandenburggate:[ [[.15,.78],[.15,.42],[.85,.42],[.85,.78]], [[.2,.78],[.2,.46]], [[.32,.78],[.32,.46]], [[.44,.78],[.44,.46]], [[.56,.78],[.56,.46]], [[.68,.78],[.68,.46]], [[.8,.78],[.8,.46]], [[.12,.42],[.88,.42]], [[.4,.42],[.4,.32],[.6,.32],[.6,.42]], [[.6,.34],[.68,.32],[.72,.35]], [[.42,.32],[.42,.27]], [[.5,.32],[.5,.27]], [[.1,.78],[.9,.78]], [[.08,.83],[.92,.83]] ],
+  christredeemer:[ circle(.5,.2,.06), [[.5,.26],[.5,.62]], [[.2,.36],[.8,.36]], [[.42,.62],[.4,.78]], [[.58,.62],[.6,.78]], [[.42,.62],[.58,.62]], [[.4,.78],[.6,.78],[.62,.88],[.38,.88],[.4,.78]], [[.34,.9],[.66,.9]] ],
+  lighthouse:[ [[.38,.9],[.42,.4],[.58,.4],[.62,.9],[.38,.9]], [[.4,.55],[.6,.55]], [[.39,.72],[.61,.72]], [[.42,.4],[.58,.4],[.58,.32],[.42,.32],[.42,.4]], [[.44,.32],[.44,.24],[.56,.24],[.56,.32]], [[.44,.24],[.5,.18],[.56,.24]], [[.56,.28],[.72,.22]], [[.56,.31],[.74,.31]], [[.44,.28],[.28,.22]], [[.44,.31],[.26,.31]], [[.3,.9],[.7,.9]] ],
+  ferriswheel:[ circle(.5,.44,.38), circle(.5,.44,.32), circle(.5,.44,.03), [[.5,.44],[.5,.06]], [[.5,.44],[.5,.82]], [[.5,.44],[.12,.44]], [[.5,.44],[.88,.44]], [[.5,.44],[.77,.17]], [[.5,.44],[.23,.71]], [[.5,.44],[.77,.71]], [[.5,.44],[.23,.17]], circle(.5,.08,.03,8), circle(.5,.8,.03,8), circle(.14,.44,.03,8), circle(.86,.44,.03,8), [[.5,.44],[.35,.9]], [[.5,.44],[.65,.9]], [[.3,.9],[.7,.9]] ],
+  totempole: [ [[.38,.1],[.38,.9],[.62,.9],[.62,.1],[.38,.1]], circle(.5,.22,.06,10), circle(.46,.2,.01,6), circle(.54,.2,.01,6), [[.46,.26],[.54,.26]], [[.34,.18],[.38,.2]], [[.66,.18],[.62,.2]], [[.38,.32],[.2,.28],[.16,.36]], [[.62,.32],[.8,.28],[.84,.36]], circle(.5,.46,.06,10), [[.44,.46],[.56,.46]], [[.44,.51],[.5,.58],[.56,.51]], circle(.5,.72,.06,10), [[.44,.72],[.4,.7]], [[.56,.72],[.6,.7]], [[.45,.78],[.55,.78]] ],
+  gondola:   [ [[.1,.64],[.3,.72],[.7,.72],[.9,.6]], [[.1,.64],[.06,.48]], [[.06,.48],[.11,.44],[.08,.5]], [[.9,.6],[.94,.5]], [[.3,.72],[.3,.66],[.7,.66],[.7,.72]], circle(.62,.4,.04), [[.62,.44],[.62,.58]], [[.62,.48],[.72,.4]], [[.72,.4],[.82,.32]], [[.62,.58],[.58,.66]], [[.62,.58],[.66,.66]], [[.05,.82],[.95,.82]] ],
+
+  // ===== Space =====
+  rocket:    [ [[.5,.1],[.4,.35],[.4,.7],[.6,.7],[.6,.35],[.5,.1]], circle(.5,.42,.07), [[.4,.55],[.28,.72],[.4,.68]], [[.6,.55],[.72,.72],[.6,.68]], [[.44,.7],[.42,.82],[.46,.76],[.5,.9],[.54,.76],[.58,.82],[.56,.7]] ],
+  astronaut: [ circle(.5,.28,.14), circle(.5,.28,.1,20,Math.PI*1.15,Math.PI*1.95), [[.4,.4],[.36,.7],[.64,.7],[.6,.4]], [[.4,.44],[.24,.5],[.22,.66]], [[.6,.44],[.76,.5],[.78,.66]], [[.4,.7],[.38,.9]], [[.6,.7],[.62,.9]], circle(.5,.55,.04), [[.2,.66],[.16,.7]], [[.78,.66],[.82,.7]] ],
+  alien:     [ ell(.5,.35,.18,.22), ell(.42,.35,.05,.08), ell(.58,.35,.05,.08), [[.5,.57],[.5,.75]], [[.5,.62],[.4,.72]], [[.5,.62],[.6,.72]], [[.5,.75],[.44,.88]], [[.5,.75],[.56,.88]], [[.46,.49],[.54,.49]] ],
+  saturn:    [ circle(.5,.5,.24), ell(.5,.5,.46,.13), ell(.5,.5,.4,.11) ],
+  satellite: [ [[.42,.4],[.42,.6],[.58,.6],[.58,.4],[.42,.4]], [[.42,.44],[.2,.44],[.2,.56],[.42,.56]], [[.22,.44],[.22,.56]], [[.3,.44],[.3,.56]], [[.58,.44],[.8,.44],[.8,.56],[.58,.56]], [[.7,.44],[.7,.56]], [[.78,.44],[.78,.56]], ell(.5,.32,.08,.05), [[.5,.4],[.5,.36]], [[.5,.36],[.5,.3]], circle(.5,.28,.015,8) ],
+  moonlander:[ [[.35,.4],[.4,.3],[.6,.3],[.65,.4],[.6,.55],[.4,.55],[.35,.4]], [[.42,.3],[.44,.2],[.56,.2],[.58,.3]], circle(.5,.25,.02,8), [[.4,.5],[.28,.72],[.22,.72]], [[.6,.5],[.72,.72],[.78,.72]], [[.42,.55],[.4,.7]], [[.58,.55],[.6,.7]], [[.36,.7],[.44,.7]], [[.56,.7],[.64,.7]], [[.5,.2],[.5,.12]] ],
+  comet:     [ circle(.7,.35,.1), circle(.7,.35,.14,16,Math.PI*0.35,Math.PI*1.65), [[.62,.4],[.3,.66]], [[.66,.32],[.28,.5]], [[.6,.45],[.34,.72]], [[.64,.28],[.34,.4]], [[.2,.3],[.22,.3]], [[.86,.62],[.88,.62]] ],
+  telescope: [ [[.35,.72],[.6,.28]], [[.42,.76],[.67,.32]], [[.6,.28],[.67,.32]], [[.35,.72],[.42,.76]], [[.62,.3],[.68,.22]], [[.44,.7],[.34,.9]], [[.5,.68],[.52,.9]], [[.5,.68],[.66,.88]], [[.4,.52],[.46,.55]] ],
+  crystalball:[ circle(.5,.42,.28), [[.35,.66],[.3,.78],[.7,.78],[.65,.66]], [[.28,.8],[.72,.8]], [[.42,.34],[.5,.3]], [[.46,.32],[.44,.4]], [[.58,.5],[.6,.48]] ],
+
+  // ===== Fantasy / myth =====
+  dragon:    [ [[.06,.62],[.16,.5],[.28,.56],[.42,.5],[.54,.54]], [[.54,.54],[.64,.44],[.72,.37]], [[.72,.37],[.83,.34],[.91,.4]], [[.91,.4],[.85,.46],[.75,.46],[.72,.4]], circle(.81,.39,.008,6), [[.73,.34],[.68,.25]], [[.42,.5],[.44,.26],[.56,.36],[.58,.24],[.68,.34],[.66,.5]], [[.3,.57],[.28,.74]], [[.5,.55],[.5,.72]], [[.06,.62],[-.01,.7],[.06,.73]], [[.03,.71],[.07,.66]] ],
+  unicorn:   [ ell(.44,.56,.24,.13), [[.6,.5],[.7,.38]], circle(.75,.32,.075), [[.79,.34],[.9,.4]], [[.76,.25],[.83,.08]], [[.77,.2],[.8,.19]], [[.78,.16],[.81,.15]], [[.8,.12],[.82,.11]], [[.7,.27],[.68,.18]], [[.72,.3],[.66,.36],[.72,.4],[.66,.46],[.7,.5]], [[.3,.68],[.28,.88]], [[.4,.68],[.4,.88]], [[.55,.68],[.56,.88]], [[.63,.68],[.64,.88]], [[.2,.52],[.1,.6],[.08,.74],[.14,.82]] ],
+  mermaid:   [ circle(.5,.2,.08), [[.42,.16],[.34,.3],[.4,.42]], [[.58,.16],[.66,.3],[.6,.42]], [[.46,.28],[.46,.5]], [[.54,.28],[.54,.5]], [[.46,.34],[.36,.44]], [[.54,.34],[.64,.44]], [[.46,.5],[.42,.66],[.46,.8]], [[.54,.5],[.58,.66],[.54,.8]], [[.46,.8],[.34,.88],[.5,.82],[.66,.88],[.54,.8]], [[.44,.58],[.56,.58]] ],
+  wizardhat: [ [[.3,.66],[.46,.2],[.52,.1],[.6,.14],[.56,.24],[.64,.66]], ell(.47,.68,.34,.08), [[.34,.62],[.6,.62]], [[.44,.58],[.44,.66],[.5,.66],[.5,.58],[.44,.58]], [[.45,.4],[.49,.4]], [[.47,.38],[.47,.42]], [[.53,.5],[.57,.5]], [[.55,.48],[.55,.52]] ],
+  gnome:     [ [[.32,.5],[.5,.12],[.68,.5]], [[.3,.5],[.7,.5]], [[.38,.5],[.36,.6]], [[.62,.5],[.64,.6]], [[.38,.6],[.4,.85],[.5,.9],[.6,.85],[.62,.6]], circle(.5,.58,.03), [[.4,.85],[.4,.92]], [[.6,.85],[.6,.92]], [[.35,.92],[.45,.92]], [[.55,.92],[.65,.92]] ],
+  mushroomhouse:[ ell(.5,.4,.4,.22,20,Math.PI,Math.PI*2), [[.1,.4],[.9,.4]], circle(.3,.32,.04,10), circle(.55,.26,.05,10), circle(.7,.34,.035,10), [[.3,.4],[.3,.85],[.7,.85],[.7,.4]], [[.44,.85],[.44,.62],[.5,.56],[.56,.62],[.56,.85]], circle(.61,.5,.05), [[.28,.85],[.72,.85]] ],
+  castle:    [ [[.15,.85],[.15,.4],[.85,.4],[.85,.85]], [[.15,.4],[.15,.34],[.22,.34],[.22,.4]], [[.29,.4],[.29,.34],[.36,.34],[.36,.4]], [[.64,.4],[.64,.34],[.71,.34],[.71,.4]], [[.78,.4],[.78,.34],[.85,.34],[.85,.4]], [[.1,.85],[.1,.28],[.24,.28],[.24,.4]], [[.76,.4],[.76,.28],[.9,.28],[.9,.85]], [[.1,.28],[.1,.23],[.14,.23],[.14,.28]], [[.17,.28],[.17,.23],[.2,.23],[.2,.28]], [[.8,.28],[.8,.23],[.83,.23],[.83,.28]], [[.86,.28],[.86,.23],[.9,.23],[.9,.28]], [[.17,.23],[.17,.13],[.26,.16],[.17,.18]], [[.83,.23],[.83,.13],[.92,.16],[.83,.18]], [[.42,.85],[.42,.6],[.5,.52],[.58,.6],[.58,.85]], [[.08,.85],[.92,.85]] ],
+
+  // ===== Dinosaurs =====
+  trex:      [ [[.05,.55],[.24,.48],[.42,.42],[.54,.33],[.62,.24],[.74,.21],[.85,.25],[.9,.33]], [[.9,.33],[.73,.35]], [[.75,.38],[.89,.42]], [[.75,.36],[.77,.39],[.79,.36],[.81,.39],[.83,.36],[.85,.39]], circle(.83,.29,.009,6), [[.73,.35],[.68,.46],[.66,.54]], [[.05,.55],[.24,.6],[.44,.62],[.56,.62]], [[.66,.54],[.7,.7],[.64,.84],[.72,.85]], [[.54,.6],[.5,.72],[.46,.84],[.54,.85]], [[.68,.48],[.73,.53],[.77,.52]] ],
+  brontosaurus:[ [[.04,.5],[.15,.42],[.28,.4],[.4,.42],[.55,.42],[.68,.4],[.78,.32],[.85,.2],[.9,.13]], circle(.92,.11,.05), [[.04,.5],[.15,.55],[.3,.58],[.5,.58],[.65,.56],[.75,.5]], [[.2,.56],[.2,.8]], [[.34,.58],[.34,.82]], [[.55,.58],[.55,.82]], [[.68,.55],[.68,.8]], [[.04,.5],[-.01,.46]] ],
+  pterodactyl:[ [[.1,.4],[.3,.3],[.45,.4]], [[.9,.4],[.7,.3],[.55,.4]], [[.1,.4],[.32,.45],[.45,.42]], [[.9,.4],[.68,.45],[.55,.42]], [[.45,.4],[.5,.55],[.55,.4]], [[.5,.4],[.52,.3],[.64,.28]], [[.5,.34],[.42,.28]], circle(.53,.34,.006,6) ],
+
+  // ===== Exotic animals =====
+  elephant:  [ ell(.44,.52,.28,.18), circle(.74,.46,.15), ell(.68,.44,.11,.14), [[.86,.5],[.9,.64],[.86,.76],[.9,.82]], [[.84,.55],[.82,.67]], circle(.78,.42,.01,8), [[.24,.55],[.24,.82]], [[.24,.82],[.32,.82]], [[.34,.58],[.34,.82]], [[.56,.58],[.56,.82]], [[.66,.55],[.66,.82]], [[.16,.5],[.1,.52]] ],
+  giraffe:   [ ell(.4,.6,.18,.11), [[.52,.55],[.62,.2]], [[.46,.56],[.58,.2]], circle(.62,.14,.06), [[.66,.14],[.74,.16]], [[.59,.09],[.58,.03]], [[.65,.09],[.66,.03]], [[.3,.7],[.28,.92]], [[.38,.7],[.38,.92]], [[.46,.68],[.47,.92]], [[.5,.66],[.52,.92]], [[.24,.58],[.16,.64]], circle(.36,.58,.02,8), circle(.44,.63,.02,8), circle(.4,.69,.02,8), circle(.55,.4,.015,8), circle(.56,.3,.015,8) ],
+  lion:      [ ell(.44,.56,.24,.13), [[.63,.53],[.7,.45]], circle(.75,.4,.11), circle(.75,.4,.07), [[.75,.29],[.75,.24]], [[.86,.4],[.91,.4]], [[.64,.4],[.59,.4]], [[.68,.32],[.63,.28]], [[.82,.32],[.87,.28]], [[.68,.48],[.63,.52]], [[.82,.48],[.87,.52]], [[.75,.51],[.75,.56]], circle(.72,.38,.008,6), circle(.78,.38,.008,6), [[.72,.44],[.78,.44]], [[.3,.67],[.28,.86]], [[.4,.67],[.4,.86]], [[.53,.67],[.54,.86]], [[.61,.67],[.62,.86]], [[.2,.52],[.1,.57],[.14,.64]] ],
+  panda:     [ ell(.5,.62,.24,.2), circle(.5,.3,.16), circle(.38,.18,.06), circle(.62,.18,.06), ell(.42,.31,.05,.07), ell(.58,.31,.05,.07), circle(.42,.32,.015,8), circle(.58,.32,.015,8), circle(.5,.38,.02,8), [[.32,.55],[.24,.72]], [[.68,.55],[.76,.72]], [[.4,.8],[.4,.92]], [[.6,.8],[.6,.92]] ],
+  tiger:     [ ell(.44,.56,.26,.14), [[.63,.53],[.72,.43]], circle(.77,.39,.1), [[.71,.33],[.69,.27],[.74,.32]], [[.83,.33],[.85,.27],[.8,.32]], circle(.74,.38,.008,6), circle(.8,.38,.008,6), [[.77,.43],[.77,.46]], [[.73,.48],[.81,.48]], [[.34,.45],[.33,.57]], [[.41,.44],[.4,.58]], [[.48,.44],[.47,.58]], [[.55,.44],[.54,.58]], [[.62,.46],[.61,.58]], [[.3,.68],[.28,.86]], [[.4,.68],[.4,.86]], [[.53,.68],[.54,.86]], [[.61,.68],[.62,.86]], [[.2,.52],[.1,.48]] ],
+  zebra:     [ ell(.45,.56,.24,.13), [[.62,.52],[.72,.4]], circle(.76,.34,.08), [[.8,.36],[.9,.42]], [[.72,.28],[.7,.2]], [[.78,.28],[.8,.2]], [[.34,.45],[.33,.67]], [[.4,.44],[.39,.68]], [[.46,.44],[.45,.68]], [[.52,.44],[.51,.68]], [[.58,.45],[.57,.67]], [[.66,.46],[.72,.42]], [[.68,.52],[.74,.48]], [[.3,.67],[.28,.87]], [[.4,.67],[.4,.87]], [[.54,.67],[.55,.87]], [[.62,.67],[.63,.87]], [[.22,.52],[.14,.6]] ],
+  hippo:     [ ell(.4,.55,.3,.18), ell(.76,.55,.16,.13), circle(.71,.5,.02,8), circle(.82,.5,.02,8), [[.65,.6],[.9,.6]], [[.68,.46],[.66,.4],[.7,.44]], [[.83,.46],[.85,.4],[.81,.44]], [[.26,.7],[.26,.84]], [[.38,.72],[.38,.84]], [[.54,.72],[.54,.84]], [[.64,.68],[.64,.82]], [[.12,.5],[.06,.48]] ],
+  rhino:     [ ell(.44,.55,.28,.16), [[.68,.5],[.78,.5],[.86,.56],[.84,.66],[.74,.66],[.7,.6]], [[.86,.54],[.9,.4],[.88,.5]], [[.8,.56],[.82,.48],[.84,.54]], circle(.74,.52,.01,8), [[.66,.44],[.64,.37],[.68,.42]], [[.28,.68],[.28,.84]], [[.4,.7],[.4,.84]], [[.56,.7],[.56,.84]], [[.66,.66],[.66,.82]], [[.16,.52],[.1,.56]] ],
+  gorilla:   [ circle(.5,.28,.11), [[.43,.22],[.5,.16],[.57,.22]], circle(.46,.28,.01,6), circle(.54,.28,.01,6), [[.46,.34],[.5,.37],[.54,.34]], [[.36,.4],[.28,.7],[.4,.85],[.6,.85],[.72,.7],[.64,.4]], [[.36,.44],[.2,.6],[.24,.8]], [[.64,.44],[.8,.6],[.76,.8]], [[.2,.8],[.28,.83]], [[.76,.8],[.68,.83]], [[.44,.85],[.44,.92]], [[.56,.85],[.56,.92]] ],
+  flamingo:  [ ell(.45,.42,.16,.1), [[.5,.36],[.57,.2],[.5,.11],[.42,.14]], circle(.4,.14,.045), [[.37,.16],[.28,.2],[.34,.23]], [[.44,.5],[.42,.72],[.5,.72]], [[.46,.5],[.46,.9]], [[.46,.9],[.4,.92]], [[.46,.9],[.52,.92]], [[.4,.42],[.52,.46]] ],
+  toucan:    [ ell(.44,.55,.18,.15), circle(.62,.4,.1), [[.7,.36],[.95,.3],[.92,.44],[.72,.46]], [[.72,.4],[.9,.37]], circle(.6,.36,.012,8), [[.3,.6],[.2,.66]], [[.42,.68],[.4,.8]], [[.5,.68],[.5,.8]], [[.4,.8],[.36,.82]], [[.5,.8],[.54,.82]], [[.35,.5],[.3,.44]] ],
+  sloth:     [ [[.1,.2],[.9,.2]], [[.35,.22],[.32,.4],[.28,.36]], [[.32,.4],[.34,.44]], [[.65,.22],[.68,.4],[.72,.36]], [[.68,.4],[.66,.44]], ell(.5,.56,.16,.2), circle(.5,.5,.1), circle(.45,.5,.02,8), circle(.55,.5,.02,8), [[.4,.49],[.36,.51]], [[.6,.49],[.64,.51]], [[.47,.56],[.5,.58],[.53,.56]] ],
+  llama:     [ ell(.42,.6,.18,.12), [[.5,.52],[.56,.28]], [[.44,.54],[.5,.28]], circle(.53,.22,.06), [[.5,.17],[.48,.08],[.52,.15]], [[.56,.17],[.58,.08],[.54,.15]], [[.56,.24],[.63,.28]], [[.3,.7],[.28,.9]], [[.38,.7],[.38,.9]], [[.48,.68],[.49,.9]], [[.54,.66],[.55,.9]], [[.24,.58],[.18,.6]] ],
+  alpaca:    [ circle(.42,.62,.2,24), [[.5,.5],[.54,.32]], [[.46,.52],[.5,.32]], circle(.53,.27,.09), [[.48,.2],[.47,.12],[.51,.19]], [[.58,.2],[.59,.12],[.55,.19]], [[.47,.26],[.59,.26]], circle(.5,.29,.008,6), circle(.56,.29,.008,6), [[.32,.78],[.32,.92]], [[.4,.8],[.4,.92]], [[.5,.78],[.5,.92]], [[.56,.76],[.56,.92]] ],
+  moose:     [ ell(.42,.52,.26,.15), [[.6,.48],[.72,.38]], [[.72,.38],[.8,.42],[.85,.52],[.79,.56],[.72,.52]], [[.75,.52],[.75,.62]], [[.72,.32],[.62,.3],[.55,.34]], [[.62,.3],[.56,.24]], [[.62,.3],[.6,.22]], [[.62,.3],[.65,.23]], [[.79,.32],[.89,.3],[.96,.34]], [[.89,.3],[.86,.23]], [[.89,.3],[.91,.22]], [[.89,.3],[.95,.24]], circle(.75,.42,.008,6), [[.28,.64],[.26,.86]], [[.38,.64],[.38,.86]], [[.52,.62],[.53,.86]], [[.6,.6],[.61,.86]] ],
+  bison:     [ [[.2,.42],[.24,.32],[.34,.34],[.42,.44]], ell(.4,.56,.24,.14), circle(.68,.5,.12), [[.62,.42],[.58,.35],[.64,.4]], [[.74,.42],[.78,.35],[.72,.4]], [[.66,.58],[.66,.72]], circle(.66,.48,.01,8), [[.3,.68],[.28,.86]], [[.4,.68],[.4,.86]], [[.5,.64],[.5,.86]], [[.56,.62],[.56,.86]], [[.16,.44],[.1,.46]], [[.26,.36],[.24,.46]], [[.32,.36],[.3,.48]] ],
+  wolf:      [ ell(.42,.62,.24,.12), [[.58,.57],[.66,.44],[.64,.32]], [[.64,.32],[.6,.26],[.66,.24],[.72,.3]], [[.6,.28],[.56,.22]], [[.68,.24],[.64,.3]], [[.66,.24],[.6,.2]], [[.28,.72],[.26,.9]], [[.38,.72],[.38,.9]], [[.5,.72],[.51,.9]], [[.58,.7],[.59,.9]], [[.2,.58],[.1,.52],[.06,.62]], circle(.86,.2,.07) ],
+  ostrich:   [ ell(.42,.5,.2,.16), [[.54,.42],[.62,.2],[.6,.12]], circle(.58,.1,.04), [[.56,.11],[.5,.12]], [[.4,.64],[.38,.9]], [[.38,.9],[.44,.9]], [[.48,.64],[.5,.9]], [[.5,.9],[.56,.9]], [[.24,.46],[.14,.42],[.16,.5]], [[.36,.5],[.44,.54]] ],
+  meerkat:   [ ell(.5,.62,.1,.18), circle(.5,.34,.08), [[.45,.28],[.43,.22],[.47,.27]], [[.55,.28],[.57,.22],[.53,.27]], circle(.47,.34,.012,8), circle(.53,.34,.012,8), [[.48,.38],[.5,.41],[.52,.38]], [[.44,.5],[.42,.63]], [[.56,.5],[.58,.63]], [[.5,.8],[.62,.88]], [[.46,.8],[.46,.9]], [[.54,.8],[.54,.9]] ],
+
+  // ===== Vehicles / structures =====
+  hotairballoon:[ [[.28,.5],[.24,.35],[.32,.15],[.5,.06],[.68,.15],[.76,.35],[.72,.5]], [[.5,.06],[.5,.5]], [[.38,.09],[.36,.5]], [[.62,.09],[.64,.5]], [[.28,.5],[.72,.5]], [[.28,.5],[.44,.68]], [[.72,.5],[.56,.68]], [[.44,.68],[.44,.78],[.56,.78],[.56,.68]] ],
+  zeppelin:  [ ell(.5,.4,.42,.16), [[.1,.4],[.02,.3],[.1,.36]], [[.1,.4],[.02,.5],[.1,.44]], [[.4,.54],[.42,.62],[.58,.62],[.6,.54]], [[.42,.55],[.42,.5]], [[.58,.55],[.58,.5]], [[.9,.4],[.82,.36]], [[.9,.4],[.82,.44]] ],
+  submarine: [ ell(.5,.55,.4,.16), [[.42,.42],[.42,.28],[.56,.28],[.56,.42]], [[.5,.28],[.5,.18]], [[.5,.18],[.56,.18]], circle(.4,.55,.04), circle(.55,.55,.04), circle(.68,.55,.04), [[.1,.55],[.04,.48]], [[.1,.55],[.04,.62]], [[.9,.55],[.96,.5]], [[.9,.55],[.96,.6]] ],
+  vikingship:[ [[.1,.65],[.2,.72],[.8,.72],[.9,.6]], [[.1,.65],[.07,.5],[.13,.44]], [[.13,.44],[.2,.46],[.13,.5]], [[.9,.6],[.94,.5]], circle(.28,.66,.03,10), circle(.4,.66,.03,10), circle(.52,.66,.03,10), circle(.64,.66,.03,10), [[.5,.66],[.5,.14]], [[.3,.2],[.7,.2],[.7,.44],[.3,.44],[.3,.2]], [[.4,.2],[.4,.44]], [[.5,.2],[.5,.44]], [[.6,.2],[.6,.44]], [[.05,.82],[.95,.82]] ],
+  pirateship:[ [[.15,.6],[.2,.75],[.8,.75],[.85,.6]], [[.15,.6],[.85,.6]], [[.25,.67],[.31,.67]], [[.4,.67],[.46,.67]], [[.55,.67],[.61,.67]], [[.4,.6],[.4,.12]], [[.62,.6],[.62,.2]], [[.3,.2],[.5,.2],[.48,.4],[.32,.4],[.3,.2]], [[.54,.26],[.72,.26],[.7,.44],[.56,.44]], [[.4,.12],[.4,.06],[.52,.08],[.4,.1]], circle(.44,.075,.008,6), [[.05,.82],[.95,.82]] ],
+  treasurechest:[ [[.2,.85],[.2,.55],[.8,.55],[.8,.85],[.2,.85]], [[.18,.55],[.2,.4],[.5,.32],[.8,.4],[.82,.55]], [[.18,.55],[.82,.55]], [[.46,.55],[.46,.65],[.54,.65],[.54,.55]], circle(.5,.6,.01,6), [[.32,.55],[.3,.4]], [[.68,.55],[.7,.4]], circle(.3,.82,.03,10), circle(.4,.86,.03,10), circle(.66,.84,.03,10) ],
+  tornado:   [ [[.3,.15],[.7,.15]], [[.28,.2],[.72,.2]], [[.35,.2],[.45,.5],[.5,.75],[.48,.9]], [[.65,.2],[.55,.5],[.52,.75],[.54,.9]], [[.4,.32],[.6,.36]], [[.44,.48],[.58,.5]], [[.48,.64],[.56,.66]], [[.4,.88],[.34,.9]], [[.6,.86],[.66,.9]] ],
+  geyser:    [ [[.1,.8],[.9,.8]], ell(.5,.8,.14,.04), [[.44,.78],[.42,.4],[.44,.2],[.4,.1]], [[.56,.78],[.58,.4],[.56,.2],[.6,.1]], [[.5,.75],[.5,.15]], [[.4,.15],[.34,.1]], [[.6,.15],[.66,.1]], [[.44,.08],[.42,.03]], [[.56,.08],[.58,.03]], [[.3,.5],[.26,.42],[.32,.36]] ],
+  robot:     [ [[.35,.25],[.35,.5],[.65,.5],[.65,.25],[.35,.25]], circle(.44,.36,.03), circle(.56,.36,.03), [[.44,.44],[.56,.44]], [[.5,.25],[.5,.16]], circle(.5,.14,.03), [[.32,.5],[.3,.8],[.7,.8],[.68,.5]], [[.4,.58],[.6,.58]], [[.4,.66],[.6,.66]], [[.32,.55],[.2,.55],[.2,.72]], [[.68,.55],[.8,.55],[.8,.72]], [[.4,.8],[.4,.92]], [[.6,.8],[.6,.92]], [[.36,.92],[.44,.92]], [[.56,.92],[.64,.92]] ],
+
+  // ===== Trees / tropical =====
+  palmtree:  [ [[.4,.9],[.44,.5],[.5,.32]], [[.42,.7],[.46,.7]], [[.43,.55],[.47,.55]], [[.5,.32],[.35,.24],[.22,.28]], [[.5,.32],[.36,.16],[.26,.12]], [[.5,.32],[.5,.14],[.48,.06]], [[.5,.32],[.66,.16],[.76,.14]], [[.5,.32],[.68,.26],[.8,.3]], [[.5,.32],[.6,.34],[.72,.42]], circle(.5,.36,.02,8), circle(.55,.35,.02,8), [[.3,.9],[.58,.9]] ],
+  coconuttree:[ [[.48,.92],[.5,.4]], [[.52,.92],[.54,.4]], [[.48,.75],[.52,.75]], [[.48,.6],[.52,.6]], [[.51,.4],[.32,.32],[.2,.34]], [[.51,.4],[.34,.22],[.24,.18]], [[.51,.4],[.5,.2],[.48,.1]], [[.51,.4],[.68,.22],[.78,.18]], [[.51,.4],[.7,.32],[.82,.34]], circle(.47,.44,.025,8), circle(.53,.44,.025,8), circle(.5,.48,.025,8), [[.34,.92],[.66,.92]] ],
+  bananabunch:[ [[.5,.1],[.5,.2]], [[.46,.2],[.3,.28],[.22,.48],[.26,.6]], [[.46,.24],[.36,.32],[.32,.5],[.26,.6]], [[.49,.21],[.42,.34],[.42,.56],[.48,.64]], [[.52,.22],[.48,.36],[.48,.56],[.48,.64]], [[.54,.2],[.7,.28],[.78,.48],[.74,.6]], [[.54,.24],[.64,.32],[.68,.5],[.74,.6]], [[.44,.2],[.56,.2]] ],
+  tulip:     [ [[.5,.9],[.5,.5]], [[.5,.65],[.34,.55],[.42,.7]], [[.5,.62],[.66,.52],[.58,.68]], [[.38,.5],[.36,.28],[.44,.4],[.5,.24],[.56,.4],[.64,.28],[.62,.5],[.38,.5]] ],
+
+  // ===== Misc =====
+  cuckooclock:[ [[.25,.35],[.5,.15],[.75,.35]], [[.28,.35],[.72,.35],[.72,.7],[.28,.7],[.28,.35]], circle(.5,.5,.12), [[.5,.5],[.5,.42]], [[.5,.5],[.57,.53]], [[.44,.35],[.44,.28],[.56,.28],[.56,.35]], [[.5,.7],[.5,.85]], circle(.5,.87,.04), [[.38,.7],[.38,.82]], circle(.38,.84,.025), [[.62,.7],[.62,.82]], circle(.62,.84,.025) ],
+  teepee:    [ [[.2,.85],[.5,.15],[.8,.85]], [[.2,.85],[.8,.85]], [[.44,.22],[.56,.1]], [[.56,.22],[.44,.1]], [[.5,.18],[.5,.06]], [[.42,.85],[.44,.6],[.5,.54],[.56,.6],[.58,.85]], [[.32,.6],[.68,.6]], [[.38,.45],[.62,.45]] ],
+  sombrero:  [ ell(.5,.62,.42,.1), [[.3,.6],[.36,.35],[.46,.28],[.54,.28],[.64,.35],[.7,.6]], ell(.5,.58,.18,.05), [[.32,.6],[.36,.55]], [[.68,.6],[.64,.55]] ],
+  mapleleaf: [ [[.5,.92],[.5,.62]], [[.5,.62],[.4,.63],[.44,.55],[.3,.57],[.36,.47],[.24,.45],[.34,.39],[.28,.29],[.4,.33],[.42,.21],[.5,.31],[.58,.21],[.6,.33],[.72,.29],[.66,.39],[.76,.45],[.64,.47],[.7,.57],[.56,.55],[.6,.63],[.5,.62]] ],
+  nessie:    [ [[.05,.6],[.15,.6]], [[.15,.6],[.22,.48],[.3,.6]], [[.3,.6],[.4,.5],[.5,.6]], [[.5,.6],[.6,.52],[.7,.6]], [[.7,.6],[.76,.4],[.78,.28]], circle(.81,.24,.05), [[.84,.25],[.91,.27]], circle(.81,.22,.008,6), [[.78,.19],[.76,.14]], [[.83,.19],[.85,.14]], [[.9,.6],[.95,.6]], [[.05,.67],[.95,.67]] ],
+  clog:      [ [[.16,.5],[.14,.66],[.24,.72],[.66,.7],[.82,.6],[.92,.44]], [[.92,.44],[.74,.5],[.56,.52]], [[.16,.5],[.28,.46],[.44,.46],[.56,.52]], ell(.36,.52,.12,.055), [[.6,.62],[.78,.58]] ]
+};
+
+/* ---------- index ---------- */
+const listEl = document.getElementById('list');
+const qEl = document.getElementById('q');
+let current = null;
+
+function renderList(filter=""){
+  const f = filter.trim().toLowerCase();
+  listEl.innerHTML = "";
+  let count = 0;
+  for (const [region, subs] of Object.entries(REGIONS)){
+    const hits = subs.filter(s => s.toLowerCase().includes(f));
+    if (!hits.length) continue;
+    const h = document.createElement('div'); h.className='region'; h.textContent=region; listEl.appendChild(h);
+    for (const s of hits){
+      const b = document.createElement('button');
+      b.type='button'; b.textContent=s; b.dataset.suburb=s;
+      if (ART[s]) b.classList.add('has-art');
+      if (s===current) b.classList.add('on');
+      const d=document.createElement('span'); d.className='dot'; b.appendChild(d);
+      b.addEventListener('click', ()=>choose(s));
+      listEl.appendChild(b); count++;
+    }
+  }
+  if (!count){ const e=document.createElement('div'); e.className='empty'; e.textContent=`No suburb called “${filter}”. Try another spelling.`; listEl.appendChild(e); }
+}
+qEl.addEventListener('input', e=>renderList(e.target.value));
+renderList();
+
+/* ---------- drawing engine ---------- */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const sheet = document.getElementById('sheet');
+const promptEl = document.getElementById('prompt');
+const stageEl = document.getElementById('stage');
+const actionsEl = document.getElementById('actions');
+const noteEl = document.getElementById('note');
+const stitch = document.getElementById('stitch');
+const knot = document.getElementById('knot');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let W=0,H=0, raf=0, job=0;
+
+function setSize(){
+  const r = sheet.getBoundingClientRect();
+  const dpr = Math.min(devicePixelRatio||1, 2);
+  W = Math.round(r.width*dpr); H = Math.round(r.height*dpr);
+  cv.width=W; cv.height=H;
+}
+
+function loadImage(src){
+  return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
+}
+function offscreen(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
+
+/* value noise, 2 octaves, returns Float32Array in [0,1] */
+function noiseField(w,h,cells,seed){
+  let s=seed>>>0; const rnd=()=>{ s^=s<<13; s>>>=0; s^=s>>>17; s^=s<<5; s>>>=0; return (s>>>0)/4294967296; };
+  const gw=cells+2, gh=Math.ceil(cells*h/w)+2;
+  const g=new Float32Array(gw*gh); for(let i=0;i<g.length;i++) g[i]=rnd();
+  const out=new Float32Array(w*h);
+  const sm=t=>t*t*(3-2*t);
+  for(let y=0;y<h;y++){ const fy=y/h*(gh-1); const y0=fy|0, ty=sm(fy-y0);
+    for(let x=0;x<w;x++){ const fx=x/w*(gw-1); const x0=fx|0, tx=sm(fx-x0);
+      const a=g[y0*gw+x0], b=g[y0*gw+x0+1], c=g[(y0+1)*gw+x0], d=g[(y0+1)*gw+x0+1];
+      out[y*w+x]=(a*(1-tx)+b*tx)*(1-ty)+(c*(1-tx)+d*tx)*ty; } }
+  return out;
+}
+function combine(w,h,parts){ // parts: [{field, weight}] + optional fn(x,y) base
+  const out=new Float32Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ let v=0; const i=y*w+x;
+    for(const p of parts) v+= p.fn ? p.fn(x/w,y/h)*p.weight : p.field[i]*p.weight;
+    out[i]=v; }
+  // normalise to 0..1
+  let mn=1e9,mx=-1e9; for(const v of out){ if(v<mn)mn=v; if(v>mx)mx=v; }
+  for(let i=0;i<out.length;i++) out[i]=(out[i]-mn)/(mx-mn);
+  return out;
+}
+
+function buildLayers(img){
+  const base=offscreen(W,H); const b=base.getContext('2d');
+  b.fillStyle='#FFFFFF'; b.fillRect(0,0,W,H);
+  // fit image into sheet, respecting aspect
+  const s=Math.min(W/img.width,H*0.82/img.height); const iw=img.width*s, ih=img.height*s;
+  b.drawImage(img,(W-iw)/2,(H*0.82-ih)/2,iw,ih);
+  const fit={ox:(W-iw)/2,oy:(H*0.82-ih)/2,iw,ih};
+  const src=b.getImageData(0,0,W,H).data;
+
+  // luminance
+  const lum=new Float32Array(W*H);
+  for(let i=0;i<W*H;i++) lum[i]=(0.299*src[i*4]+0.587*src[i*4+1]+0.114*src[i*4+2]);
+
+  // sobel edges -> linework layer
+  const line=offscreen(W,H); const lc=line.getContext('2d');
+  const ld=lc.createImageData(W,H); const L=ld.data;
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+    const i=y*W+x;
+    const gx=-lum[i-W-1]-2*lum[i-1]-lum[i+W-1]+lum[i-W+1]+2*lum[i+1]+lum[i+W+1];
+    const gy=-lum[i-W-1]-2*lum[i-W]-lum[i-W+1]+lum[i+W-1]+2*lum[i+W]+lum[i+W+1];
+    let m=Math.sqrt(gx*gx+gy*gy)/4; // 0..~255
+    let a=Math.min(255, m*1.6);
+    if (a<18) a=0;
+    L[i*4]=38; L[i*4+1]=37; L[i*4+2]=34; L[i*4+3]=a;
+  }
+  lc.putImageData(ld,0,0);
+
+  // rough sketch layer: only the big shapes, computed at half size on blurred tone → soft, thicker, lighter lines
+  const hw=W>>1, hh=H>>1; const lo=new Float32Array(hw*hh);
+  for(let y=0;y<hh;y++)for(let x=0;x<hw;x++){ const i=(y*2)*W+x*2; lo[y*hw+x]=(lum[i]+lum[i+1]+lum[i+W]+lum[i+W+1])/4; }
+  const bl=new Float32Array(hw*hh); const R=2;
+  for(let pass=0;pass<2;pass++){ const src2=pass?bl:lo, dst=pass?lo:bl;
+    for(let y=0;y<hh;y++)for(let x=0;x<hw;x++){ let s=0,n=0; for(let k=-R;k<=R;k++){ const xx=x+k; if(xx>=0&&xx<hw){s+=src2[y*hw+xx];n++;} } dst[y*hw+x]=s/n; }
+    for(let y=0;y<hh;y++)for(let x=0;x<hw;x++){ let s=0,n=0; for(let k=-R;k<=R;k++){ const yy=y+k; if(yy>=0&&yy<hh){s+=dst[yy*hw+x];n++;} } src2[y*hw+x]=s/n; }
+  }
+  const sk=offscreen(hw,hh); const skc=sk.getContext('2d'); const kd=skc.createImageData(hw,hh); const K=kd.data;
+  for(let y=1;y<hh-1;y++)for(let x=1;x<hw-1;x++){ const i=y*hw+x;
+    const gx=-lo[i-hw-1]-2*lo[i-1]-lo[i+hw-1]+lo[i-hw+1]+2*lo[i+1]+lo[i+hw+1];
+    const gy=-lo[i-hw-1]-2*lo[i-hw]-lo[i-hw+1]+lo[i+hw-1]+2*lo[i+hw]+lo[i+hw+1];
+    let a=Math.sqrt(gx*gx+gy*gy)/4*2.4; if(a<45) a=0; K[i*4]=96;K[i*4+1]=94;K[i*4+2]=90;K[i*4+3]=Math.min(190,a); }
+  skc.putImageData(kd,0,0);
+  const sketch=offscreen(W,H); const skx=sketch.getContext('2d'); skx.imageSmoothingEnabled=true; skx.drawImage(sk,0,0,W,H);
+
+  // graphite shading layer (tonal, no colour)
+  const shade=offscreen(W,H); const sc=shade.getContext('2d');
+  const sd=sc.createImageData(W,H); const S=sd.data;
+  for(let i=0;i<W*H;i++){ const v=lum[i]; const a=Math.max(0,(215-v))*1.05; // darker = more graphite
+    S[i*4]=52; S[i*4+1]=50; S[i*4+2]=46; S[i*4+3]=Math.min(210,a); }
+  sc.putImageData(sd,0,0);
+
+  return {base, line, shade, sketch, fit};
+}
+
+/* mask at half res */
+function makeMasks(px){
+  const mw=Math.ceil(W/2), mh=Math.ceil(H/2);
+  // which marker does this pixel need? order the pens: beige → yellow/ochre → red → green → blue/teal → brown → grey/black
+  const pen=new Float32Array(mw*mh);
+  for(let y=0;y<mh;y++)for(let x=0;x<mw;x++){ const i=((y*2)*W+x*2)*4; const r=px[i]/255,g=px[i+1]/255,b=px[i+2]/255;
+    const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn; const s=d===0?0:d/(1-Math.abs(2*l-1));
+    let hue=0; if(d){ if(mx===r)hue=((g-b)/d+6)%6; else if(mx===g)hue=(b-r)/d+2; else hue=(r-g)/d+4; hue*=60; }
+    let k;
+    if(l>0.82&&s<0.5) k=0;                       // paper-light beige
+    else if(s<0.16) k=6;                          // greys & black
+    else if(hue>=35&&hue<70) k=1;                 // yellow / ochre
+    else if(hue<20||hue>=330) k=2;                // red
+    else if(hue>=70&&hue<170) k=3;                // green
+    else if(hue>=170&&hue<270) k=4;               // blue / teal
+    else k=5;                                     // browns & the rest
+    pen[y*mw+x]=k/6; }
+  const n1=noiseField(mw,mh,9,1234), n2=noiseField(mw,mh,26,777), n3=noiseField(mw,mh,5,42), n4=noiseField(mw,mh,14,99);
+  return {
+    mw,mh,
+    // rough sketch: big loose patches across the whole sheet at once
+    sketch: combine(mw,mh,[{field:n3,weight:0.6},{field:n1,weight:0.3},{fn:(x,y)=>Math.hypot(x-0.5,(y-0.5)*0.6),weight:0.1}]),
+    // details: fine lines pop up around the composition, roughly centre-out
+    line: combine(mw,mh,[{field:n1,weight:0.4},{field:n2,weight:0.25},{fn:(x,y)=>Math.hypot(x-0.5,(y-0.5)*0.6)*1.2,weight:0.35}]),
+    // colour: one marker at a time (pen order), patchy within each pen
+    colour: combine(mw,mh,[{field:pen,weight:0.86},{field:n4,weight:0.09},{field:n2,weight:0.05}])
+  };
+}
+
+const PHASES = [ // seconds
+  {key:'sketch',  dur:6,   label:'Rough sketch'},
+  {key:'gag',     dur:6,   label:'Hmm… no.'},
+  {key:'line',    dur:8.5, label:'Fineliner details'},
+  {key:'marker',  dur:18,  label:'Markers, one pen at a time'},
+  {key:'sign',    dur:3.0, label:''}
+];
+const TOTAL = PHASES.reduce((a,p)=>a+p.dur,0);
+
+async function choose(name){
+  current=name; renderList(qEl.value);
+  const src = ART[name] || ART[DEMO];
+  noteEl.textContent = ART[name] ? "" : `The ${name} illustration hasn't been painted yet — this is the ${DEMO} artwork as a demo.`;
+  if (innerWidth<=860) sheet.scrollIntoView({behavior: reduced?'auto':'smooth', block:'start'});
+  await draw(name, src);
+}
+
+async function draw(name, src){
+  const myJob=++job; cancelAnimationFrame(raf);
+  actionsEl.hidden=true; knot.style.opacity=0; setStitch(0);
+  promptEl.classList.add('hide'); stageEl.textContent='';
+  setSize();
+  await document.fonts.ready.catch(()=>{});
+  const img = await loadImage(src);
+  if (myJob!==job) return;
+  const layers = buildLayers(img);
+  const px = layers.base.getContext('2d').getImageData(0,0,W,H).data;
+  const masks = makeMasks(px);
+
+  /* the wrong doodle, on the margin next to the drawing */
+  const g = GAG[name] || (ART[name]?null:GAG[DEMO]);
+  const gag=offscreen(W,H); const gc=gag.getContext('2d'); gc.lineCap='round'; gc.lineJoin='round'; gc.filter=`blur(${1.6*W/1000}px)`;
+  let doodle=null;
+  if(g&&DOODLES[g.wrong]){ const {ox,oy,iw,ih}=layers.fit; const size=(g.size||GAG_SIZE)*iw, pad=size/2+6; const cx=Math.min(W-pad,Math.max(pad,ox+g.x*iw)), cy=Math.min(H-pad,Math.max(pad,oy+g.y*ih));
+    const wob=(i)=>Math.sin(i*12.9898)*0.012;
+    const polys=DOODLES[g.wrong].map((pl,k)=>pl.map(([x,y],i)=>[cx-size/2+(x+wob(i+k*7))*size, cy-size/2+(y+wob(i*3+k))*size]));
+    const segs=[]; let total=0; polys.forEach(pl=>{ for(let i=1;i<pl.length;i++){ const L=Math.hypot(pl[i][0]-pl[i-1][0],pl[i][1]-pl[i-1][1]); segs.push({a:pl[i-1],b:pl[i],L,from:total}); total+=L; } });
+    doodle={segs,total,cx,cy,size};
+  }
+  let drawnTo=0; const crumbs=[];
+  function drawDoodleTo(len){
+    gc.strokeStyle='rgb(96,94,90)'; gc.lineWidth=4*S; gc.globalAlpha=0.42;   // same pencil as the rough sketch
+    for(const s of doodle.segs){ if(s.from+s.L<=drawnTo||s.from>=len) continue;
+      const t0=Math.max(0,(drawnTo-s.from)/s.L), t1=Math.min(1,(len-s.from)/s.L);
+      gc.beginPath(); gc.moveTo(s.a[0]+(s.b[0]-s.a[0])*t0, s.a[1]+(s.b[1]-s.a[1])*t0); gc.lineTo(s.a[0]+(s.b[0]-s.a[0])*t1, s.a[1]+(s.b[1]-s.a[1])*t1); gc.stroke();
+      cursor.x=s.a[0]+(s.b[0]-s.a[0])*t1; cursor.y=s.a[1]+(s.b[1]-s.a[1])*t1; cursor.tx=cursor.x; cursor.ty=cursor.y; }
+    drawnTo=len;
+  }
+  function erase(q){
+    const d=doodle; const sweeps=4; const k=q*sweeps; const row=Math.min(sweeps-1,Math.floor(k)); const u=k-row; const dir=row%2?1-u:u;
+    const x=d.cx-d.size*0.6+dir*d.size*1.2, y=d.cy-d.size*0.5+(row+0.5)/sweeps*d.size;
+    gc.globalCompositeOperation='destination-out'; gc.globalAlpha=1; gc.lineWidth=d.size/sweeps*1.15; gc.lineCap='round';
+    gc.beginPath(); gc.moveTo(cursor.x,cursor.y); gc.lineTo(x,y); gc.stroke(); gc.globalCompositeOperation='source-over';
+    cursor.x=x; cursor.y=y; cursor.tx=x; cursor.ty=y;
+    if(Math.random()<0.7) crumbs.push({x:x+(Math.random()-0.5)*d.size*0.4, y:y+(Math.random()-0.5)*d.size*0.15, vy:0.4*S+Math.random()*S, r:(0.8+Math.random()*1.4)*S, a:0.8});
+  }
+  function drawCrumbs(){ for(const c of crumbs){ c.y+=c.vy; c.vy+=0.12*S; c.a-=0.018; if(c.a<=0) continue; ctx.globalAlpha=c.a; ctx.fillStyle='#8a8580'; ctx.beginPath(); ctx.ellipse(c.x,c.y,c.r*1.6,c.r,0.6,0,Math.PI*2); ctx.fill(); } ctx.globalAlpha=1; while(crumbs.length&&crumbs[0].a<=0) crumbs.shift(); }
+
+  if (reduced){ ctx.drawImage(layers.base,0,0); sign(1); finish(); return; }
+
+  const layer=offscreen(W,H); const lc=layer.getContext('2d');          // the layer currently being masked in
+  const maskC=offscreen(masks.mw,masks.mh); const mc=maskC.getContext('2d');
+  const mid=mc.createImageData(masks.mw,masks.mh);
+  const inkMask=offscreen(W,H); const im=inkMask.getContext('2d'); im.lineCap='round'; im.strokeStyle='#fff';  // where marker has touched
+  const colour=offscreen(W,H); const cc=colour.getContext('2d');       // the artwork, revealed through inkMask
+  const angleField=noiseField(masks.mw,masks.mh,7,2024);
+  const S=W/1000;
+
+  const cursor={x:W*0.05,y:H*0.5,tx:W*0.05,ty:H*0.5};
+  let tip='rgb(60,60,60)';
+  let start=performance.now(), phaseIdx=0, phaseStart=start;
+
+  function maskTo(field,t){
+    const D=mid.data; const soft=0.07;
+    for(let i=0;i<field.length;i++){ let a=(t*(1+soft)-field[i])/soft; a=a<0?0:a>1?1:a; D[i*4+3]=a*255|0; D[i*4]=D[i*4+1]=D[i*4+2]=0; }
+    mc.putImageData(mid,0,0);
+  }
+  function frontier(field,t){
+    let best=null,bd=1e12;
+    for(let k=0;k<160;k++){ const i=(Math.random()*field.length)|0; const d=field[i]-t;
+      if(d>-0.03&&d<0.015){ const x=(i%masks.mw)*2,y=(i/masks.mw|0)*2; const dd=(x-cursor.x)**2+(y-cursor.y)**2+Math.random()*40000;
+        if(dd<bd){bd=dd;best={x,y};} } }
+    if(best){cursor.tx=best.x;cursor.ty=best.y;}
+    cursor.x+=(cursor.tx-cursor.x)*0.28; cursor.y+=(cursor.ty-cursor.y)*0.28;
+  }
+  const lumAt=(x,y)=>{ if(x<0||y<0||x>=W||y>=H) return 255; const i=((y|0)*W+(x|0))*4; return 0.299*px[i]+0.587*px[i+1]+0.114*px[i+2]; };
+
+  /* one marker stroke: a broad flat swipe that reveals the artwork underneath it.
+     First pass leaves the ink slightly translucent; overlapping passes bring it to full — like layering marker. */
+  function markerStroke(x,y,late){
+    if(x<0||y<0||x>=W-1||y>=H-1) return false;
+    const lum=lumAt(x,y); if(lum>244) return false;
+    const mi=((y/2)|0)*masks.mw+((x/2)|0);
+    const base=-0.55+(angleField[mi]-0.5)*1.4;
+    const ang=Math.random()<0.3 ? base+1.5 : base;
+    const len=(16+Math.random()*30)*S*(late?1.5:1);
+    const dx=Math.cos(ang)*len/2, dy=Math.sin(ang)*len/2;
+    if(!late && (lumAt(x-dx,y-dy)>246||lumAt(x+dx,y+dy)>246)) return false;
+    im.globalAlpha = late ? 1 : 0.62+Math.random()*0.25;
+    im.lineWidth=(7+Math.random()*7)*S;
+    const bow=(Math.random()-0.5)*len*0.1;
+    im.beginPath(); im.moveTo(x-dx,y-dy); im.quadraticCurveTo(x+bow*Math.sin(ang),y-bow*Math.cos(ang),x+dx,y+dy); im.stroke();
+    const i=((y|0)*W+(x|0))*4; tip=`rgb(${px[i]},${px[i+1]},${px[i+2]})`;
+    return true;
+  }
+  function swipe(field,t,budget){
+    const late=t>0.9; let laid=0,tries=0,anchor=null;
+    while(laid<budget && tries<budget*5){
+      tries++;
+      const i=(Math.random()*field.length)|0; const d=field[i]-t;
+      if(late){ if(d>0.02) continue; } else if(d<-0.07||d>0.005) continue;
+      const x=(i%masks.mw)*2+Math.random()*2, y=(i/masks.mw|0)*2+Math.random()*2;
+      if(markerStroke(x,y,late)){ laid++; if(!anchor||Math.random()<0.12) anchor={x,y}; }
+    }
+    im.globalAlpha=1;
+    if(anchor){ cursor.tx=anchor.x; cursor.ty=anchor.y; }
+    cursor.x+=(cursor.tx-cursor.x)*0.22; cursor.y+=(cursor.ty-cursor.y)*0.22;
+  }
+  function drawTool(kind){
+    const s=S; ctx.save(); ctx.translate(cursor.x,cursor.y);
+    if(kind==='marker'){
+      ctx.rotate(-0.95);
+      ctx.fillStyle=tip; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(9*s,-5*s); ctx.lineTo(9*s,5*s); ctx.closePath(); ctx.fill();   // chisel tip
+      ctx.fillStyle='#EDEDEA'; ctx.fillRect(9*s,-6*s,14*s,12*s);                                                                       // collar
+      ctx.fillStyle=tip; ctx.fillRect(23*s,-7*s,70*s,14*s);                                                                             // barrel in ink colour
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(23*s,-7*s,70*s,3*s);
+      ctx.fillStyle='#2b2a27'; ctx.fillRect(93*s,-7*s,3*s,14*s);
+    } else if(kind==='eraser'){
+      ctx.rotate(-0.5);
+      ctx.fillStyle='#E9A0A8'; ctx.beginPath(); ctx.roundRect(-14*s,-9*s,54*s,18*s,4*s); ctx.fill();
+      ctx.fillStyle='#F6F1E7'; ctx.fillRect(22*s,-9*s,18*s,18*s);
+      ctx.strokeStyle='#3a3835'; ctx.lineWidth=1.2*s; ctx.beginPath(); ctx.roundRect(-14*s,-9*s,54*s,18*s,4*s); ctx.stroke();
+    } else if(kind==='sketch'){
+      ctx.rotate(-0.75);
+      ctx.fillStyle='#4a4844'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(9*s,-3*s); ctx.lineTo(9*s,3*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#EAD9B8'; ctx.beginPath(); ctx.moveTo(9*s,-3.5*s); ctx.lineTo(18*s,-4.5*s); ctx.lineTo(18*s,4.5*s); ctx.lineTo(9*s,3.5*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#C9A54A'; ctx.fillRect(18*s,-4.5*s,66*s,9*s);
+      ctx.fillStyle='#D2342A'; ctx.fillRect(84*s,-4.5*s,8*s,9*s);
+    } else {
+      ctx.rotate(-0.75);
+      ctx.fillStyle='#262522'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(7*s,-2*s); ctx.lineTo(7*s,2*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#D8D8D4'; ctx.fillRect(7*s,-3*s,10*s,6*s);
+      ctx.fillStyle='#2b2a27'; ctx.fillRect(17*s,-4*s,72*s,8*s);
+      ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fillRect(17*s,-4*s,72*s,2*s);
+    }
+    ctx.restore();
+  }
+  function compose(){
+    ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
+    if(phaseIdx===0){ ctx.drawImage(layer,0,0); return; }
+    ctx.drawImage(layers.sketch,0,0);            // rough sketch stays underneath
+    if(phaseIdx===1){ ctx.drawImage(gag,0,0); drawCrumbs(); return; }
+    if(phaseIdx===2){ ctx.drawImage(layer,0,0); return; }
+    ctx.drawImage(layers.line,0,0);              // fineliner underneath…
+    cc.clearRect(0,0,W,H); cc.drawImage(layers.base,0,0);
+    cc.globalCompositeOperation='destination-in'; cc.drawImage(inkMask,0,0); cc.globalCompositeOperation='source-over';
+    ctx.drawImage(colour,0,0);                   // …marker colour on top, opaque where it has been laid
+  }
+
+  /* hand-letter the suburb name along the bottom — one spaced capital at a time, black, auto-scaled so nothing clips */
+  function sign(progress){
+    const text=(current||DEMO).toUpperCase(); const chars=[...text];
+    const measure=(sz)=>{ ctx.font=`700 ${sz}px "Caveat","Segoe Print","Bradley Hand",cursive`; const tr=sz*0.40; const ws=chars.map(c=>c===' '?sz*0.60:ctx.measureText(c).width); return {tr,ws,total:ws.reduce((a,w)=>a+w+tr,0)-tr}; };
+    let size=Math.max(18,H*0.082), m=measure(size); const maxW=W*0.9;
+    if(m.total>maxW){ size*=maxW/m.total; m=measure(size); }
+    ctx.font=`700 ${size}px "Caveat","Segoe Print","Bradley Hand",cursive`;
+    ctx.textBaseline='alphabetic'; ctx.textAlign='left'; ctx.fillStyle='#141414';
+    const N=chars.length; let x=(W-m.total)/2; const y=H*0.955; let pen=null;
+    for(let k=0;k<N;k++){ const ch=chars[k], w=m.ws[k]; const p=Math.max(0,Math.min(1,progress*N-k));
+      if(ch!==' '&&p>0){ ctx.save(); ctx.globalAlpha=p<1?p*p:1; ctx.translate(x,y+Math.sin(k*1.7)*size*0.03); ctx.rotate(Math.sin(k*2.3)*0.02); ctx.fillText(ch,0,0); ctx.restore(); }
+      if(p>0&&p<1) pen={x:x+w*p,y:y-size*0.28};
+      x+=w+m.tr;
+    }
+    ctx.globalAlpha=1; return pen;
+  }
+
+  function frame(now){
+    if(myJob!==job) return;
+    const elapsed=(now-start)/1000;
+    setStitch(Math.min(1,elapsed/TOTAL));
+    let ph=PHASES[phaseIdx]; let t=(now-phaseStart)/1000/ph.dur;
+    if(t>=1){
+      if(ph.key==='marker'){ im.globalAlpha=1; im.fillStyle='#fff'; im.fillRect(0,0,W,H); }   // every last sliver is inked
+      phaseIdx++; phaseStart=now;
+      if(phaseIdx>=PHASES.length){ ctx.drawImage(layers.base,0,0); sign(1); finish(); return; }
+      ph=PHASES[phaseIdx]; t=0;
+    }
+    if(ph.key==='gag' && !doodle){ phaseIdx++; phaseStart=now; ph=PHASES[phaseIdx]; t=0; }
+    const e=t*t*(3-2*t)*0.85+t*0.15;
+    if(ph.key==='sketch'||ph.key==='line'){
+      const src=ph.key==='sketch'?layers.sketch:layers.line, fld=ph.key==='sketch'?masks.sketch:masks.line;
+      maskTo(fld,e);
+      lc.clearRect(0,0,W,H); lc.drawImage(src,0,0);
+      lc.globalCompositeOperation='destination-in'; lc.drawImage(maskC,0,0,W,H); lc.globalCompositeOperation='source-over';
+      compose(); frontier(fld,e); drawTool(ph.key);
+    } else if(ph.key==='marker'){
+      swipe(masks.colour,e,120); compose(); drawTool('marker');
+    } else if(ph.key==='gag'){
+      // 0–.55 draw the wrong thing · .55–.66 look at it · .66–1 rub it out
+      if(t<0.55){ const q=t/0.55; drawDoodleTo(doodle.total*(q*q*(3-2*q))); compose(); drawTool('sketch'); }
+      else if(t<0.66){ compose(); cursor.x+=(doodle.cx+doodle.size*0.7-cursor.x)*0.08; cursor.y+=(doodle.cy+doodle.size*0.6-cursor.y)*0.08; drawTool('sketch'); }
+      else { erase((t-0.66)/0.34); compose(); drawTool('eraser'); }
+    } else if(ph.key==='sign'){
+      ctx.drawImage(layers.base,0,0);
+      const pen=sign(t);
+      if(pen){ cursor.x=pen.x; cursor.y=pen.y; drawTool('pen'); }
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(t=>{start=t;phaseStart=t;frame(t);});
+}
+
+function finish(){ stageEl.textContent=''; actionsEl.hidden=false; knot.style.opacity=1; setStitch(1); }
+
+function setStitch(p){ const x=Math.round(p*1000); stitch.setAttribute('d',`M0 7 L${x} 7`); knot.setAttribute('cx',x); }
+
+document.getElementById('again').addEventListener('click',()=>{ if(current) choose(current); });
+document.getElementById('save').addEventListener('click',()=>{
+  const a=document.createElement('a'); a.download=`${current.replace(/\s+/g,'-').toLowerCase()}-drawn.png`; a.href=cv.toDataURL('image/png'); a.click();
+});
+addEventListener('resize',()=>{ if(current && actionsEl.hidden===false){ cancelAnimationFrame(raf); const url=cv.toDataURL(); setSize(); loadImage(url).then(i=>ctx.drawImage(i,0,0,W,H)); } });
+
+/* open with art, not a blank sheet: auto-draw one suburb on load */
+choose(DEMO);
+</script>
+</body>
+</html>
