@@ -96,6 +96,41 @@
     .story li{line-height:1.7}
   }
 
+
+  /* Two views of the same project: the drawing and its story. */
+  .project-tabs{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:18px}
+  .project-tab{border:0;border-bottom:2px solid transparent;background:none;color:var(--graphite);font:inherit;font-size:14px;line-height:1.5;padding:5px 0;cursor:pointer}
+  .project-tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--thread)}
+  .project-tab:hover{color:var(--ink)}
+  .project-tab:focus-visible,.about-explore:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+  .workspace{min-width:0}
+  .studio[hidden],.about-panel[hidden],.search-controls[hidden]{display:none}
+  .studio:focus-visible,.about-panel:focus-visible{outline:2px solid var(--rule);outline-offset:-4px}
+  .about-panel{min-height:0;padding:52px 40px 64px}
+  .about-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:clamp(36px,6vw,88px);max-width:1160px;margin:0 auto}
+  .about-heading h2{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(42px,5.5vw,76px);font-weight:400;line-height:1.04;letter-spacing:-.025em;margin:18px 0 30px;text-wrap:balance}
+  .about-byline{font-size:14px;line-height:1.7;color:var(--graphite);margin:0;padding-top:20px;border-top:1px solid var(--rule);max-width:240px}
+  .about-copy{max-width:660px;font-size:17px;line-height:1.8}
+  .about-copy p{margin:0 0 22px}
+  .about-copy .about-lead{font-family:"Instrument Serif",Georgia,serif;font-size:28px;line-height:1.45}
+  .about-copy h3{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:29px;line-height:1.2;margin:36px 0 14px}
+  .about-copy .about-signoff{font-family:"Instrument Serif",Georgia,serif;font-size:clamp(30px,3vw,40px);line-height:1.2;padding-top:28px;margin-top:36px;border-top:1px solid var(--rule)}
+  .about-explore{display:inline-flex;align-items:center;gap:18px;border:0;border-bottom:1px solid var(--ink);background:none;font:inherit;font-size:15px;color:var(--ink);padding:8px 0;cursor:pointer}
+  .about-explore:hover{color:var(--thread);border-color:var(--thread)}
+  @media (min-width:960px) and (min-height:560px){
+    .workspace{flex:1;min-height:0;display:flex;flex-direction:column}
+    .about-panel{flex:1;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-gutter:stable}
+    .about-heading{position:sticky;top:0;align-self:start}
+  }
+  @media (max-width:760px){
+    .about-panel{padding:32px 20px 48px}
+    .about-layout{grid-template-columns:minmax(0,1fr);gap:30px}
+    .about-heading h2{font-size:clamp(42px,9vw,62px);margin:16px 0 22px}
+    .about-byline{max-width:none}
+    .about-copy{font-size:16px}
+    .about-copy .about-lead{font-size:25px}
+  }
+
   @media (prefers-reduced-motion:reduce){.prompt{transition:none}}
 </style>
 </head>
@@ -105,6 +140,10 @@
     <div class="masthead">
       <h1>Greater Sydney,<br>drawn.</h1>
       <p>Pick a suburb and watch its portrait appear, line by line.</p>
+      <div class="project-tabs" role="tablist" aria-label="Explore the project">
+        <button class="project-tab" id="tab-draw" type="button" role="tab" aria-selected="true" aria-controls="studio" data-view="draw">Draw Sydney</button>
+        <button class="project-tab" id="tab-about" type="button" role="tab" aria-selected="false" aria-controls="about" data-view="about" tabindex="-1">About the project</button>
+      </div>
     </div>
     <div class="search-controls">
       <div class="search">
@@ -118,7 +157,8 @@
     </div>
   </header>
 
-  <main class="studio" id="studio">
+  <main class="workspace">
+  <section class="studio" id="studio" role="tabpanel" aria-labelledby="tab-draw" tabindex="0">
     <div class="artboard">
     <div class="sheet" id="sheet">
       <canvas id="cv" aria-label="Suburb illustration"></canvas>
@@ -139,6 +179,30 @@
     </div>
     </div>
     <article class="story" id="story" aria-labelledby="story-title" tabindex="0" hidden></article>
+  </section>
+  <section class="about-panel" id="about" role="tabpanel" aria-labelledby="tab-about" tabindex="0" hidden>
+    <article class="about-layout" aria-labelledby="about-title">
+      <div class="about-heading">
+        <p class="story-kicker">About the project</p>
+        <h2 id="about-title">Sydney is a<br>city of cities.</h2>
+        <p class="about-byline">A creative project by<br>Anastasia Butrym</p>
+      </div>
+      <div class="about-copy">
+        <p class="about-lead">Sydney keeps surprising me. Cross a bridge, turn off a main road, or walk a little further from the water, and you seem to arrive in another city.</p>
+        <p>The buildings change. So do the food, the pace of the street and the things people gather around. Every suburb has its own idea of a good day. A morning swim. A long lunch. A familiar face at the corner shop. A place to start again.</p>
+        <p><em>Greater Sydney, drawn</em> is my way of getting to know this extraordinary city, one neighbourhood at a time.</p>
+        <h3>First, I listen.</h3>
+        <p>I follow the stories people tell about living here: what they love, what frustrates them, what they miss and what they hope will happen next. I look into the history behind the streets and buildings. Often, a small detail opens up the whole place. The colour of an old computer. A shipyard beneath a village. A tower that uses mirrors to bring sunlight back to the ground.</p>
+        <h3>Then, I let the place become a little impossible.</h3>
+        <p>Bondi spills out of a blue iMac. Balmain travels inside an iron ship. Chippendale fits into a jacket pocket. I use these transformations to bring different parts of a neighbourhood into the same picture: its working past and everyday present, its grand ambitions and small pleasures. Each strange detail has a reason to be there.</p>
+        <h3>A portrait, line by line.</h3>
+        <p>You can watch each drawing appear and read the stories behind its details as it takes shape. I leave room for surprise, affection and contradiction. A place can be beautiful and difficult, familiar to one person and an entirely new beginning to another.</p>
+        <p>This is a growing collection. With every portrait, I find another Sydney inside the one I thought I knew. I hope you find a little of your own Sydney here, too—and a reason to explore somewhere you have never been.</p>
+        <p class="about-signoff">One city. Endlessly different.</p>
+        <button class="about-explore" id="explore-suburbs" type="button">Find your suburb <span aria-hidden="true">↗</span></button>
+      </div>
+    </article>
+  </section>
   </main>
 </div>
 
@@ -835,6 +899,7 @@ qEl.addEventListener('keydown',event=>{
 /* ---------- drawing engine ---------- */
 const storyEl=document.getElementById('story');
 const studioEl=document.getElementById('studio');
+let activeProjectView='draw';
 function renderStory(name){
   if(storyEl.dataset.suburb===name)return;
   storyEl.dataset.suburb=name;
@@ -1588,7 +1653,7 @@ async function draw(name, src){
     if(key==='gag'){gc.clearRect(0,0,W,H);crumbs.length=0;}
   }
   function frame(now){
-    if(myJob!==job||document.hidden)return;
+    if(myJob!==job||document.hidden||activeProjectView!=='draw')return;
     let soundKind=null;
     const delta=lastFrame===null?0:Math.max(0,(now-lastFrame)/1000);
     lastFrame=now; elapsed+=delta; phaseElapsed+=delta;
@@ -1626,7 +1691,7 @@ async function draw(name, src){
     raf=requestAnimationFrame(frame);
   }
   resumeDrawing=()=>{if(myJob!==job)return;lastFrame=null;cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);};
-  if(!document.hidden)resumeDrawing();
+  if(!document.hidden&&activeProjectView==='draw')resumeDrawing();
 }
 function finish(){ drawingSound.silence(); actionsEl.hidden=false; knot.style.opacity=1; setStitch(1); }
 
@@ -1644,16 +1709,54 @@ soundButton.addEventListener('click',async()=>{
   soundButton.textContent=enabled?'Mute sound':'Enable sound';
   soundButton.setAttribute('aria-pressed',String(enabled));
   soundButton.title=enabled?'':'Sound could not start. Click to try again.';
-  if(enabled&&current&&!reduced)choose(current);
+  if(enabled&&current&&!reduced&&activeProjectView==='draw')choose(current);
 });
 document.getElementById('save').addEventListener('click',()=>{
   const a=document.createElement('a'); a.download=`${current.replace(/\s+/g,'-').toLowerCase()}-drawn.png`; a.href=cv.toDataURL('image/png'); a.click();
 });
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){cancelAnimationFrame(raf);drawingSound.silence(true);}
+  if(document.hidden||activeProjectView!=='draw'){cancelAnimationFrame(raf);drawingSound.silence(true);}
   else if(resumeDrawing)resumeDrawing();
 });
 addEventListener('pagehide',()=>drawingSound.silence(true));
+
+/* ---------- project tabs ---------- */
+const projectTabs=[document.getElementById('tab-draw'),document.getElementById('tab-about')];
+const aboutPanel=document.getElementById('about');
+const searchControls=document.querySelector('.search-controls');
+const viewScroll={draw:0,about:0};
+function selectProjectTab(view){
+  if(!['draw','about'].includes(view)||view===activeProjectView)return;
+  viewScroll[activeProjectView]=window.scrollY;
+  activeProjectView=view;
+  closeSuggestions();
+  const drawing=view==='draw';
+  studioEl.hidden=!drawing;aboutPanel.hidden=drawing;searchControls.hidden=!drawing;
+  projectTabs.forEach(tab=>{
+    const selected=tab.dataset.view===view;
+    tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;
+  });
+  if(!drawing){cancelAnimationFrame(raf);drawingSound.silence(true);}
+  else if(!document.hidden&&resumeDrawing)resumeDrawing();
+  window.scrollTo(0,viewScroll[view]);
+}
+projectTabs.forEach((tab,index)=>{
+  tab.addEventListener('click',()=>selectProjectTab(tab.dataset.view));
+  tab.addEventListener('keydown',event=>{
+    let target;
+    if(event.key==='ArrowRight')target=(index+1)%projectTabs.length;
+    else if(event.key==='ArrowLeft')target=(index+projectTabs.length-1)%projectTabs.length;
+    else if(event.key==='Home')target=0;
+    else if(event.key==='End')target=projectTabs.length-1;
+    else return;
+    event.preventDefault();
+    projectTabs[target].focus();
+    selectProjectTab(projectTabs[target].dataset.view);
+  });
+});
+document.getElementById('explore-suburbs').addEventListener('click',()=>{
+  selectProjectTab('draw');qEl.focus();
+});
 
 /* open with art, not a blank sheet: auto-draw one suburb on load */
 choose(DEMO);
