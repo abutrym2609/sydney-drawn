@@ -751,7 +751,7 @@ function makeSketchStrokes(base,detail=false){
 // One ordered route drives both the marks and the nib. Pen lifts have their own
 // time on the route, but never leave a line between disconnected contours.
 function planStrokes(strokes){
-  const segments=[]; let total=0, previous=null;
+  const segments=[]; let total=0, previous=null,previousPen;
   const add=(a,b,weight,style,lift=false)=>{
     if(weight<=0)return;
     segments.push({a,b,from:total,weight,lift,...style}); total+=weight;
@@ -761,17 +761,18 @@ function planStrokes(strokes){
     if(points.length<2)continue;
     if(previous){
       const distance=Math.hypot(points[0][0]-previous[0],points[0][1]-previous[1]);
-      if(distance>0.01) add(previous,points[0],Math.min(distance*0.3,W*0.035)+W*0.002,stroke,true);
+      const changePen=stroke.pen!==previousPen;
+      if(distance>0.01||changePen) add(previous,points[0],changePen?W*0.7:Math.min(distance*0.3,W*0.035)+W*0.002,stroke,true);
     }
     for(let i=1;i<points.length;i++){
       add(points[i-1],points[i],Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]),stroke);
     }
-    previous=points[points.length-1];
+    previous=points[points.length-1];previousPen=stroke.pen;
   }
   return {segments,total};
 }
 function strokeState(plan){ return {plan,index:0,position:0}; }
-function paintStrokes(state,context,progress,cursor){
+function paintStrokes(state,context,progress,cursor,prepareStroke=null){
   const target=Math.max(state.position,Math.min(1,Math.max(0,progress))*state.plan.total);
   const segments=state.plan.segments;
   context.lineCap='round'; context.lineJoin='round';
@@ -783,6 +784,7 @@ function paintStrokes(state,context,progress,cursor){
     const position=t=>[segment.a[0]+(segment.b[0]-segment.a[0])*t,segment.a[1]+(segment.b[1]-segment.a[1])*t];
     const a=position(t0), b=position(t1);
     if(!segment.lift && t1>t0){
+      if(prepareStroke)prepareStroke(segment);
       context.strokeStyle=segment.colour; context.lineWidth=segment.width;
       context.beginPath(); context.moveTo(a[0],a[1]); context.lineTo(b[0],b[1]); context.stroke();
     }
@@ -807,49 +809,224 @@ function markerFamily(r,g,b){
   if(hue>=170&&hue<270)return 4;
   return 5;
 }
-function makeMarkerStrokes(base){
-  // Work locally across each patch with overlapping diagonal hatching, then
-  // change pens. Original pixels supply the colour and paper texture.
-  const px=base.getContext('2d').getImageData(0,0,W,H).data, S=W/1000;
-  const families=Array.from({length:7},()=>[]);
-  const step=2*S, rowGap=5*S, tile=100*S;
-  const sample=(x,y)=>{
-    if(x<0||y<0||x>=W||y>=H)return null;
-    const i=(Math.floor(y)*W+Math.floor(x))*4;
-    const r=px[i],g=px[i+1],b=px[i+2];
-    return {family:markerFamily(r,g,b),ink:`rgb(${r},${g},${b})`};
+// Recover the local stroke axis from the raster's texture, and assign every
+// coloured pixel to exactly one pen. Original colour and grain are preserved.
+function markerPalette(px){
+  const bins=new Map(),lut=new Int16Array(4096);lut.fill(-1);
+  const key=(r,g,b)=>((r>>4)<<8)|((g>>4)<<4)|(b>>4);
+  for(let i=0;i<px.length;i+=4){
+    const r=px[i],g=px[i+1],b=px[i+2];if(Math.min(r,g,b)>247)continue;
+    const k=key(r,g,b);let bin=bins.get(k);
+    if(!bin){bin={key:k,n:0,r:0,g:0,b:0};bins.set(k,bin);}
+    bin.n++;bin.r+=r;bin.g+=g;bin.b+=b;
+  }
+  const families=Array.from({length:7},()=>[]);let count=0;
+  for(const bin of bins.values()){
+    bin.r/=bin.n;bin.g/=bin.n;bin.b/=bin.n;count+=bin.n;
+    families[Math.max(0,markerFamily(bin.r,bin.g,bin.b))].push(bin);
+  }
+  const distance=(a,b)=>{
+    const r=a.r-b.r,g=a.g-b.g,blue=a.b-b.b;
+    const light=(r+2*g+blue)*0.25,co=(r-blue)*0.5,cg=(-r+2*g-blue)*0.25;
+    return light*light*0.5+(co*co+cg*cg)*3.2;
   };
-  for(let bx=0;bx<W;bx+=tile){
-    const right=Math.min(W,bx+tile);
-    for(let row=-tile*0.2;row<H*0.83;row+=rowGap){
-      let run=null;
-      const flush=()=>{
-        if(!run)return;
-        families[run.family].push({points:[[run.x,run.y],[run.end+step*0.5,run.endY+step*0.1]],colour:'#fff',ink:run.ink,width:7.8*S});
-        run=null;
-      };
-      for(let x=bx;x<right;x+=step){
-        const y=row+(x-bx)*0.2, colour=sample(x,y);
-        if(!colour||colour.family<0){flush();continue;}
-        if(run && (run.family!==colour.family||x-run.x>65*S))flush();
-        if(!run)run={x,y,end:x,endY:y,...colour};
-        else {run.end=x;run.endY=y;}
+  const pens=[];
+  for(let family=0;family<families.length;family++){
+    const items=families[family];if(!items.length)continue;
+    const population=items.reduce((n,item)=>n+item.n,0);
+    const k=Math.min(items.length,Math.max(1,Math.min(6,Math.round(Math.sqrt(population/count)*8))));
+    const centres=[{...items.reduce((a,b)=>a.n>b.n?a:b)}];
+    while(centres.length<k){
+      let best=null,score=-1;
+      for(const item of items){
+        const d=Math.min(...centres.map(centre=>distance(item,centre)))*Math.sqrt(item.n);
+        if(d>score){score=d;best=item;}
       }
-      flush();
+      if(score<1e-6)break;centres.push({...best});
+    }
+    for(let iteration=0;iteration<10;iteration++){
+      const sums=centres.map(()=>({r:0,g:0,b:0,n:0}));
+      for(const item of items){
+        let choice=0,best=Infinity;
+        centres.forEach((centre,index)=>{const d=distance(item,centre);if(d<best){best=d;choice=index;}});
+        item.group=choice;const sum=sums[choice];sum.n+=item.n;sum.r+=item.r*item.n;sum.g+=item.g*item.n;sum.b+=item.b*item.n;
+      }
+      sums.forEach((sum,index)=>{if(sum.n)centres[index]={r:sum.r/sum.n,g:sum.g/sum.n,b:sum.b/sum.n};});
+    }
+    const order=centres.map((colour,index)=>({colour,index})).sort((a,b)=>
+      (b.colour.r+2*b.colour.g+b.colour.b)-(a.colour.r+2*a.colour.g+a.colour.b));
+    for(const {colour,index} of order){
+      const members=items.filter(item=>item.group===index);if(!members.length)continue;
+      const id=pens.length;
+      pens.push({id,family,ink:`rgb(${Math.round(colour.r)},${Math.round(colour.g)},${Math.round(colour.b)})`});
+      for(const item of members)lut[item.key]=id;
     }
   }
-  const ordered=[];
-  for(const family of families){
-    // The same nearest-endpoint order used for pencil contours also keeps
-    // adjacent marker strokes together, including their natural return pass.
-    const inks=new Map(family.map(s=>[s.points[0],s.ink]));
-    for(const points of skOrder(family.map(s=>s.points))){
-      // Reversed paths still retain their original endpoint objects.
-      ordered.push({points,colour:'#fff',ink:inks.get(points[0])||inks.get(points[points.length-1]),width:7.8*S});
+  const labels=new Int16Array(W*H);labels.fill(-1);
+  const sizes=new Uint32Array(pens.length);
+  for(let p=0;p<labels.length;p++){
+    const i=p*4;if(Math.min(px[i],px[i+1],px[i+2])>247)continue;
+    labels[p]=lut[key(px[i],px[i+1],px[i+2])];if(labels[p]>=0)sizes[labels[p]]++;
+  }
+  const pixels=Array.from(sizes,n=>new Uint32Array(n)),positions=new Uint32Array(pens.length);
+  for(let p=0;p<labels.length;p++)if(labels[p]>=0)pixels[labels[p]][positions[labels[p]]++]=p;
+  return {pens,labels,pixels};
+}
+
+function markerDirections(px){
+  const step=2,w=Math.ceil(W/step),h=Math.ceil(H/step),n=w*h;
+  const grey=new Float32Array(n),xx=new Float32Array(n),xy=new Float32Array(n),yy=new Float32Array(n);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    let sum=0,samples=0;
+    for(let dy=0;dy<step&&y*step+dy<H;dy++)for(let dx=0;dx<step&&x*step+dx<W;dx++){
+      const i=((y*step+dy)*W+x*step+dx)*4;sum+=px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114;samples++;
+    }
+    grey[y*w+x]=sum/samples;
+  }
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){
+    const i=y*w+x,gx=(grey[i+1]-grey[i-1])*0.5,gy=(grey[i+w]-grey[i-w])*0.5;
+    xx[i]=gx*gx;xy[i]=gx*gy;yy[i]=gy*gy;
+  }
+  for(const values of [xx,xy,yy])skBoxBlur(values,w,h,3,2);
+  const vx=new Float32Array(n),vy=new Float32Array(n),confidence=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    // The gradient is across a drawn line; its perpendicular follows the line.
+    const angle=0.5*Math.atan2(2*xy[i],xx[i]-yy[i])+Math.PI/2;
+    vx[i]=Math.cos(angle);vy[i]=Math.sin(angle);
+    confidence[i]=Math.hypot(xx[i]-yy[i],2*xy[i])/(xx[i]+yy[i]+1e-6);
+  }
+  return {w,h,step,vx,vy,confidence};
+}
+
+function orderMarkerStrokes(strokes){
+  // Small spatial batches keep work local without an all-pairs image-wide sort.
+  const tile=100*(W/1000),groups=new Map();
+  for(const stroke of strokes){
+    const centre=stroke.points[Math.floor(stroke.points.length/2)];
+    const key=Math.floor(centre[0]/tile)+','+Math.floor(centre[1]/tile);
+    if(!groups.has(key))groups.set(key,[]);groups.get(key).push(stroke);
+  }
+  const pending=[...groups.values()],ordered=[];let x=0,y=0;
+  while(pending.length){
+    let choice=0,distance=Infinity;
+    pending.forEach((group,index)=>{const p=group[0].points[0],d=(p[0]-x)**2+(p[1]-y)**2;if(d<distance){distance=d;choice=index;}});
+    const group=pending.splice(choice,1)[0];
+    while(group.length){
+      let best=0,reverse=false,distance=Infinity;
+      group.forEach((stroke,index)=>{
+        const first=stroke.points[0],last=stroke.points[stroke.points.length-1];
+        const a=(first[0]-x)**2+(first[1]-y)**2,b=(last[0]-x)**2+(last[1]-y)**2;
+        if(a<distance){distance=a;best=index;reverse=false;}
+        if(b<distance){distance=b;best=index;reverse=true;}
+      });
+      const stroke=group.splice(best,1)[0];if(reverse)stroke.points.reverse();ordered.push(stroke);
+      [x,y]=stroke.points[stroke.points.length-1];
     }
   }
   return ordered;
 }
+
+function makeMarkerLayers(base){
+  const source=base.getContext('2d').getImageData(0,0,W,H).data;
+  const palette=markerPalette(source),field=markerDirections(source),{w,h,step,vx,vy}=field;
+  const occupancy=Array.from(palette.pens,()=>new Uint8Array(w*h));
+  palette.pixels.forEach((pixels,pen)=>{for(const p of pixels)occupancy[pen][Math.floor(Math.floor(p/W)/step)*w+Math.floor((p%W)/step)]=1;});
+  const width=3.6*(W/1000),radius=width/2,coverageRadius=radius/step*0.86;
+  const maxSteps=Math.max(8,Math.round(45*(W/1000)/step));
+  const mask=offscreen(W,H),mc=mask.getContext('2d');mc.lineCap='round';mc.lineJoin='round';mc.strokeStyle='#fff';
+  const strokes=[];let repairs=0;
+  const indexAt=(x,y)=>{const ix=Math.round(x),iy=Math.round(y);return ix>=0&&iy>=0&&ix<w&&iy<h?iy*w+ix:-1;};
+  for(const pen of palette.pens){
+    const occupied=occupancy[pen.id],covered=new Uint8Array(w*h),paths=[];
+    // Bridge small paper-grain gaps inside one pen's marks. The pixel mask
+    // remains strict: neighbouring colours are never revealed by this route.
+    const allowed=new Uint8Array(w*h);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(occupied[y*w+x]){
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+        const nx=x+dx,ny=y+dy;if(nx>=0&&ny>=0&&nx<w&&ny<h)allowed[ny*w+nx]=1;
+      }
+    }
+    const mark=(x,y)=>{
+      for(let iy=Math.max(0,Math.floor(y-coverageRadius));iy<=Math.min(h-1,Math.ceil(y+coverageRadius));iy++)
+        for(let ix=Math.max(0,Math.floor(x-coverageRadius));ix<=Math.min(w-1,Math.ceil(x+coverageRadius));ix++)
+          if((ix-x)**2+(iy-y)**2<=coverageRadius**2)covered[iy*w+ix]=1;
+    };
+    const walk=(sx,sy,sign)=>{
+      const out=[],seed=indexAt(sx,sy);let x=sx,y=sy,dx=vx[seed]*sign,dy=vy[seed]*sign,lastCell=seed;
+      for(let k=0;k<maxSteps;k++){
+        const cell=indexAt(x,y);if(cell<0)break;
+        let nx=vx[cell],ny=vy[cell];if(nx*dx+ny*dy<0){nx=-nx;ny=-ny;}
+        if(nx*dx+ny*dy<0.5)break;
+        nx=(nx+dx)*0.5;ny=(ny+dy)*0.5;const length=Math.hypot(nx,ny)||1;nx/=length;ny/=length;
+        const tx=x+nx,ty=y+ny,next=indexAt(tx,ty);
+        if(next<0||!allowed[next]||(k>2&&covered[next]&&occupied[next]&&next!==lastCell))break;
+        x=tx;y=ty;dx=nx;dy=ny;out.push([x,y]);lastCell=next;
+      }
+      return out;
+    };
+    for(let y=0;y<h;y++)for(let col=0;col<w;col++){
+      const x=y%2?w-1-col:col,index=y*w+x;if(!occupied[index]||covered[index])continue;
+      const back=walk(x,y,-1),forward=walk(x,y,1);
+      let points=back.reverse().concat([[x,y]],forward);
+      if(points.length<2)points=[[x-vx[index]*0.35,y-vy[index]*0.35],[x+vx[index]*0.35,y+vy[index]*0.35]];
+      for(let k=0;k<points.length;k++){
+        mark(...points[k]);if(k)mark((points[k][0]+points[k-1][0])/2,(points[k][1]+points[k-1][1])/2);
+      }
+      paths.push({points:skSimplify(points.map(([x,y])=>[(x+0.5)*step,(y+0.5)*step]),0.5*(W/1000)),colour:'#fff',ink:pen.ink,pen:pen.id,width});
+    }
+    // Verify real raster coverage for this pen. Any remaining pixels receive
+    // small oriented touches of that same pen; there is no final image wipe.
+    mc.clearRect(0,0,W,H);mc.lineWidth=width;
+    const draw=stroke=>{for(let i=1;i<stroke.points.length;i++){mc.beginPath();mc.moveTo(...stroke.points[i-1]);mc.lineTo(...stroke.points[i]);mc.stroke();}};
+    paths.forEach(draw);
+    const coverage=mc.getImageData(0,0,W,H).data;
+    for(const p of palette.pixels[pen.id]){
+      if(coverage[p*4+3]===255)continue;
+      const x=p%W+0.5,y=Math.floor(p/W)+0.5,index=indexAt(x/step-0.5,y/step-0.5);
+      const dx=vx[index],dy=vy[index],reach=width*0.45;
+      const stroke={points:[[x-dx*reach,y-dy*reach],[x+dx*reach,y+dy*reach]],colour:'#fff',ink:pen.ink,pen:pen.id,width};
+      paths.push(stroke);draw(stroke);repairs++;
+      // Pixels in this conservative inner capsule are fully covered, including
+      // their corners and the antialias edge. Keep the seed as a certainty.
+      const safe=Math.max(0.1,radius-1.25),span=reach+safe;
+      for(let py=Math.max(0,Math.floor(y-span));py<=Math.min(H-1,Math.ceil(y+span));py++)
+        for(let px=Math.max(0,Math.floor(x-span));px<=Math.min(W-1,Math.ceil(x+span));px++){
+          const ox=px+0.5-x,oy=py+0.5-y,t=Math.max(-reach,Math.min(reach,ox*dx+oy*dy));
+          if((ox-t*dx)**2+(oy-t*dy)**2<=safe*safe)coverage[(py*W+px)*4+3]=255;
+        }
+      coverage[p*4+3]=255;
+    }
+    strokes.push(...orderMarkerStrokes(paths));
+  }
+  return {...palette,source,field,strokes,repairs};
+}
+
+class MarkerPainter {
+  constructor(pigments){
+    this.pigments=pigments;this.pen=-1;
+    this.mask=offscreen(W,H);this.context=this.mask.getContext('2d');
+    this.layer=offscreen(W,H);this.layerContext=this.layer.getContext('2d');
+    this.reveal=offscreen(W,H);this.revealContext=this.reveal.getContext('2d');
+    this.completed=offscreen(W,H);this.completedContext=this.completed.getContext('2d');
+  }
+  renderActive(){
+    const c=this.revealContext;c.clearRect(0,0,W,H);c.drawImage(this.layer,0,0);
+    c.globalCompositeOperation='destination-in';c.drawImage(this.mask,0,0);c.globalCompositeOperation='source-over';
+  }
+  select(pen){
+    if(pen===this.pen)return;
+    if(this.pen>=0){this.renderActive();this.completedContext.drawImage(this.reveal,0,0);}
+    this.context.clearRect(0,0,W,H);this.pen=pen;
+    const image=this.layerContext.createImageData(W,H),out=image.data,source=this.pigments.source;
+    for(const p of this.pigments.pixels[pen]){const i=p*4;out[i]=source[i];out[i+1]=source[i+1];out[i+2]=source[i+2];out[i+3]=255;}
+    this.layerContext.putImageData(image,0,0);
+  }
+  drawTo(context){
+    context.drawImage(this.completed,0,0);
+    if(this.pen>=0){this.renderActive();context.drawImage(this.reveal,0,0);}
+  }
+}
+
 function buildLayers(img,animate=true){
   const base=offscreen(W,H), b=base.getContext('2d');
   b.fillStyle='#FFFFFF'; b.fillRect(0,0,W,H);
@@ -860,7 +1037,8 @@ function buildLayers(img,animate=true){
   const S=W/1000;
   const pencil=makeSketchStrokes(base).map((points,i)=>({points,colour:'#99958c',width:S*(1.0+0.18*Math.sin(i*1.7))}));
   const fineliner=makeSketchStrokes(base,true).map(points=>({points,colour:'#373530',width:0.95*S}));
-  return {base,fit,pencil:planStrokes(pencil),fineliner:planStrokes(fineliner),marker:planStrokes(makeMarkerStrokes(base))};
+  const pigments=makeMarkerLayers(base);
+  return {base,fit,pencil:planStrokes(pencil),fineliner:planStrokes(fineliner),marker:planStrokes(pigments.strokes),pigments};
 }
 
 const GLYPHS = {"A":{w:0.7,s:[[[0,1],[0.35,0],[0.7,1]],[[0.13,0.62],[0.57,0.62]]]}, "B":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.082,0.005],[0.161,0.019],[0.233,0.042],[0.297,0.073],[0.349,0.111],[0.388,0.154],[0.412,0.201],[0.42,0.25],[0.412,0.299],[0.388,0.346],[0.349,0.389],[0.297,0.427],[0.233,0.458],[0.161,0.481],[0.082,0.495],[0,0.5]],[[0,0.48],[0.094,0.485],[0.184,0.5],[0.267,0.524],[0.339,0.556],[0.399,0.596],[0.443,0.641],[0.471,0.689],[0.48,0.74],[0.471,0.791],[0.443,0.839],[0.399,0.884],[0.339,0.924],[0.267,0.956],[0.184,0.98],[0.094,0.995],[0,1]]]}, "C":{w:0.64,s:[[[0.566,0.09],[0.479,0.028],[0.384,0.001],[0.286,0.011],[0.194,0.056],[0.114,0.135],[0.052,0.241],[0.013,0.365],[0,0.5],[0.013,0.635],[0.052,0.759],[0.114,0.865],[0.194,0.944],[0.286,0.989],[0.384,0.999],[0.479,0.972],[0.566,0.91]]]}, "D":{w:0.64,s:[[[0,0],[0,1]],[[0,0],[0.117,0.01],[0.23,0.038],[0.333,0.084],[0.424,0.146],[0.499,0.222],[0.554,0.309],[0.588,0.402],[0.6,0.5],[0.588,0.598],[0.554,0.691],[0.499,0.778],[0.424,0.854],[0.333,0.916],[0.23,0.962],[0.117,0.99],[0,1]]]}, "E":{w:0.56,s:[[[0.56,0],[0,0],[0,1],[0.56,1]],[[0,0.52],[0.44,0.52]]]}, "F":{w:0.55,s:[[[0.55,0],[0,0],[0,1]],[[0,0.52],[0.42,0.52]]]}, "G":{w:0.68,s:[[[0.555,0.067],[0.454,0.013],[0.346,0.001],[0.24,0.032],[0.145,0.103],[0.069,0.209],[0.02,0.339],[0,0.484],[0.013,0.629],[0.056,0.764],[0.126,0.876],[0.217,0.955],[0.322,0.996],[0.43,0.993],[0.534,0.948],[0.623,0.865],[0.69,0.75]],[[0.69,0.75],[0.69,0.53],[0.45,0.53]]]}, "H":{w:0.64,s:[[[0,0],[0,1]],[[0.64,0],[0.64,1]],[[0,0.52],[0.64,0.52]]]}, "I":{w:0.2,s:[[[0.1,0],[0.1,1]],[[0,0],[0.2,0]],[[0,1],[0.2,1]]]}, "J":{w:0.5,s:[[[0.44,0],[0.44,0.74]],[[0.44,0.74],[0.436,0.791],[0.423,0.839],[0.403,0.884],[0.376,0.924],[0.342,0.956],[0.304,0.98],[0.263,0.995],[0.22,1],[0.177,0.995],[0.136,0.98],[0.098,0.956],[0.064,0.924],[0.037,0.884],[0.017,0.839],[0.004,0.791],[0,0.74]]]}, "K":{w:0.62,s:[[[0,0],[0,1]],[[0.6,0],[0,0.56]],[[0.18,0.42],[0.6,1]]]}, "L":{w:0.54,s:[[[0,0],[0,1],[0.54,1]]]}, "M":{w:0.82,s:[[[0,1],[0,0],[0.41,0.7],[0.82,0],[0.82,1]]]}, "N":{w:0.7,s:[[[0,1],[0,0],[0.7,1],[0.7,0]]]}, "O":{w:0.74,s:[[[0.37,0],[0.512,0.038],[0.632,0.146],[0.712,0.309],[0.74,0.5],[0.712,0.691],[0.632,0.854],[0.512,0.962],[0.37,1],[0.228,0.962],[0.108,0.854],[0.028,0.691],[0,0.5],[0.028,0.309],[0.108,0.146],[0.228,0.038],[0.37,0]]]}, "P":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]]]}, "Q":{w:0.76,s:[[[0.38,0],[0.525,0.038],[0.649,0.146],[0.731,0.309],[0.76,0.5],[0.731,0.691],[0.649,0.854],[0.525,0.962],[0.38,1],[0.235,0.962],[0.111,0.854],[0.029,0.691],[0,0.5],[0.029,0.309],[0.111,0.146],[0.235,0.038],[0.38,0]],[[0.48,0.7],[0.8,1.06]]]}, "R":{w:0.62,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]],[[0.3,0.52],[0.62,1]]]}, "S":{w:0.58,s:[[[0.44,0.036],[0.39,0.014],[0.337,0.002],[0.282,0.001],[0.228,0.009],[0.176,0.028],[0.13,0.056],[0.089,0.092],[0.058,0.135],[0.035,0.183],[0.022,0.235],[0.021,0.288],[0.03,0.34],[0.049,0.389],[0.078,0.434],[0.115,0.473],[0.43,0.478],[0.485,0.516],[0.529,0.564],[0.561,0.621],[0.577,0.683],[0.579,0.747],[0.564,0.81],[0.535,0.868],[0.492,0.918],[0.438,0.958],[0.376,0.985],[0.309,0.999],[0.241,0.998],[0.174,0.982],[0.113,0.953],[0.061,0.911],[0.02,0.86]]]}, "T":{w:0.6,s:[[[0,0],[0.6,0]],[[0.3,0],[0.3,1]]]}, "U":{w:0.66,s:[[[0,0],[0,0.72],[0,0.72],[0.006,0.775],[0.025,0.827],[0.056,0.876],[0.097,0.918],[0.147,0.953],[0.204,0.979],[0.266,0.995],[0.33,1],[0.394,0.995],[0.456,0.979],[0.513,0.953],[0.563,0.918],[0.604,0.876],[0.635,0.827],[0.654,0.775],[0.66,0.72],[0.66,0.72],[0.66,0]]]}, "V":{w:0.66,s:[[[0,0],[0.33,1],[0.66,0]]]}, "W":{w:0.94,s:[[[0,0],[0.235,1],[0.47,0.28],[0.705,1],[0.94,0]]]}, "X":{w:0.64,s:[[[0,0],[0.64,1]],[[0.64,0],[0,1]]]}, "Y":{w:0.64,s:[[[0,0],[0.32,0.54],[0.64,0]],[[0.32,0.54],[0.32,1]]]}, "Z":{w:0.6,s:[[[0,0],[0.6,0],[0,1],[0.6,1]]]}};
@@ -940,7 +1118,7 @@ const PHASES = [ // seconds
   {key:'marker',  dur:18},
   {key:'sign'} // Duration follows the name's actual strokes and pen lifts.
 ];
-let resumeDrawing=null;
+let resumeDrawing=null,lastPrepared=null;
 
 async function choose(name){
   current=name; renderList(qEl.value);
@@ -961,12 +1139,17 @@ async function draw(name, src){
   const S=W/1000;
   let layers;
   try {
-    const img=await loadImage(src);
-    if(myJob!==job)return;
-    // Let the selection paint before tracing cached images, too.
-    await new Promise(resolve=>setTimeout(resolve,0));
-    if(myJob!==job)return;
-    layers=buildLayers(img,!reduced);
+    if(lastPrepared&&lastPrepared.src===src&&lastPrepared.width===W&&lastPrepared.animate===!reduced){
+      layers=lastPrepared.layers;
+    }else{
+      lastPrepared=null;
+      const img=await loadImage(src);
+      if(myJob!==job)return;
+      await new Promise(resolve=>setTimeout(resolve,0));
+      if(myJob!==job)return;
+      layers=buildLayers(img,!reduced);
+      lastPrepared={src,width:W,animate:!reduced,layers};
+    }
   } catch(error) {
     if(myJob!==job)return;
     ctx.clearRect(0,0,W,H);
@@ -1015,14 +1198,15 @@ async function draw(name, src){
 
   const pencil=offscreen(W,H), pc=pencil.getContext('2d');
   const line=offscreen(W,H), lc=line.getContext('2d');
-  const inkMask=offscreen(W,H), im=inkMask.getContext('2d');
-  const colour=offscreen(W,H), cc=colour.getContext('2d');
+  const markerPainter=new MarkerPainter(layers.pigments),im=markerPainter.context;
+  const selectMarker=segment=>markerPainter.select(segment.pen);
   const pencilState=strokeState(layers.pencil), lineState=strokeState(layers.fineliner), markerState=strokeState(layers.marker);
   const phases=PHASES.filter(phase=>phase.key!=='gag'||doodle)
-    .map(phase=>phase.key==='sign'?{...phase,dur:lettering.duration}:phase);
+    .map(phase=>phase.key==='sign'?{...phase,dur:lettering.duration}:
+      phase.key==='marker'?{...phase,dur:Math.max(32,layers.marker.total/(W*4))}:phase);
   const total=phases.reduce((sum,phase)=>sum+phase.dur,0);
   let phaseIdx=0, phaseElapsed=0, elapsed=0, lastFrame=null;
-  let lineProgress=0, settle=0;
+  let lineProgress=0,markerProgress=0;
   const pace=t=>0.6*t+0.4*t*t*(3-2*t);
   function drawTool(kind){
     const s=S; ctx.save(); ctx.translate(cursor.x,cursor.y);
@@ -1059,23 +1243,19 @@ async function draw(name, src){
     ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
     const key=phases[phaseIdx].key;
     ctx.save();
-    ctx.globalAlpha=key==='line'?1-lineProgress*0.8:key==='marker'?0.2:1;
+    ctx.globalAlpha=key==='line'?1-lineProgress*0.8:key==='marker'?0.2*(1-markerProgress):1;
     ctx.drawImage(pencil,0,0); ctx.restore();
     if(key==='gag'){ctx.drawImage(gag,0,0);drawCrumbs();return;}
-    if(key==='line'||key==='marker')ctx.drawImage(line,0,0);
+    if(key==='line')ctx.drawImage(line,0,0);
     if(key==='marker'){
-      cc.clearRect(0,0,W,H); cc.drawImage(layers.base,0,0);
-      cc.globalCompositeOperation='destination-in'; cc.drawImage(inkMask,0,0);
-      cc.globalCompositeOperation='source-over'; ctx.drawImage(colour,0,0);
-      // Only the last fine slivers and remaining pencil disappear in this
-      // short settling pass; the source artwork is exact before signing.
-      if(settle>0){ctx.save();ctx.globalAlpha=settle;ctx.drawImage(layers.base,0,0);ctx.restore();}
+      ctx.save();ctx.globalAlpha=1-markerProgress;ctx.drawImage(line,0,0);ctx.restore();
+      markerPainter.drawTo(ctx);
     }
   }
   function completePhase(key){
     if(key==='sketch')paintStrokes(pencilState,pc,1,cursor);
     if(key==='line'){paintStrokes(lineState,lc,1,cursor);lineProgress=1;}
-    if(key==='marker'){paintStrokes(markerState,im,1,cursor);settle=1;}
+    if(key==='marker'){paintStrokes(markerState,im,1,cursor,selectMarker);markerProgress=1;}
     if(key==='gag'){gc.clearRect(0,0,W,H);crumbs.length=0;}
   }
   function frame(now){
@@ -1101,9 +1281,8 @@ async function draw(name, src){
       lineProgress=pace(t);paintStrokes(lineState,lc,lineProgress,cursor);compose();drawTool('line');
       soundKind='line';
     } else if(phase.key==='marker'){
-      paintStrokes(markerState,im,Math.min(1,t/0.94),cursor);
-      settle=Math.max(0,(t-0.92)/0.08);settle=settle*settle*(3-2*settle);
-      tip=cursor.ink;compose();if(t<0.94){drawTool('marker');soundKind='marker';}
+      markerProgress=t;paintStrokes(markerState,im,t,cursor,selectMarker);
+      tip=cursor.ink;compose();drawTool('marker');soundKind='marker';
     } else if(phase.key==='gag'){
       cursor.lift=false;
       if(t<0.55){const q=t/0.55;drawDoodleTo(doodle.total*(q*q*(3-2*q)));compose();drawTool('sketch');soundKind='sketch';}
