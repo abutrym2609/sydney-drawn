@@ -65,6 +65,22 @@
   .actions[hidden]{display:none}
   .note{color:var(--graphite);font-size:13px}
 
+  /* Artist's notes stay readable while the canvas continues drawing. */
+  .story{width:100%;max-width:780px;margin:32px auto 0;padding-top:32px;border-top:1px solid var(--rule)}
+  .story[hidden]{display:none}
+  .story-kicker{margin:0 0 8px;color:var(--graphite);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+  .story h2{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:clamp(30px,4vw,44px);line-height:1.1;margin:0 0 24px}
+  .story-intro{font-family:"Instrument Serif",Georgia,serif;font-size:23px;line-height:1.5;margin:0 0 30px}
+  .story ol{padding-left:24px;margin:0}
+  .story li{font-size:16px;line-height:1.8;padding-left:8px;margin:0 0 24px}
+  .story li::marker{font-family:"Instrument Serif",Georgia,serif;color:var(--graphite)}
+  .story strong{font-weight:500}
+  .story-ref{font-family:"Instrument Sans",system-ui,sans-serif;font-size:11px;line-height:0;white-space:nowrap;margin-left:5px}
+  .story-ref a{color:var(--graphite);text-decoration:none;padding:2px}
+  .story-ref a:hover{text-decoration:underline;color:var(--ink)}
+  .story-ref a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  @media (max-width:640px){.story{margin-top:20px;padding-top:24px}.story-intro{font-size:21px}.story li{padding-left:4px}}
+
   @media (prefers-reduced-motion:reduce){.prompt{transition:none}}
 </style>
 </head>
@@ -103,20 +119,12 @@
       </div>
       <div class="note" id="note"></div>
     </div>
+    <article class="story" id="story" aria-labelledby="story-title" hidden></article>
   </main>
 </div>
 
 <script>
 /* ---------- data ---------- */
-const REGIONS = {
-  "Inner city": ["Sydney","The Rocks","Barangaroo","Millers Point","Dawes Point","Haymarket","Surry Hills","Darlinghurst","Paddington","Chippendale","Ultimo","Pyrmont","Glebe","Redfern","Waterloo","Woolloomooloo","Potts Point","Elizabeth Bay","Rushcutters Bay","Moore Park"],
-  "Eastern suburbs": ["Bondi","Bondi Beach","Bondi Junction","Bronte","Tamarama","Clovelly","Coogee","Maroubra","Randwick","Kensington","Queens Park","Edgecliff","Darling Point","Double Bay","Point Piper","Bellevue Hill","Rose Bay","Vaucluse","Dover Heights"],
-  "Inner west": ["Balmain","Balmain East","Birchgrove","Annandale","Leichhardt","Forest Lodge","Camperdown","Newtown","Enmore","Stanmore","Petersham","Marrickville","Dulwich Hill","Ashfield","Haberfield","Croydon","Croydon Park","Burwood","Concord","Concord West","Five Dock","Drummoyne","Abbotsford","Chiswick","Cabarita","Canada Bay","Breakfast Point"],
-  "Lower north shore": ["Kirribilli","Milsons Point","McMahons Point","Lavender Bay","North Sydney","Waverton","Wollstonecraft","Crows Nest","St Leonards","Neutral Bay","Kurraba Point","Cremorne","Cremorne Point","Cammeray","Mosman","Naremburn","Northbridge","Willoughby","Willoughby East","North Willoughby","Castlecrag","Castle Cove","Middle Cove","Artarmon","Chatswood","Lane Cove","Greenwich","Riverview","Longueville","Linley Point","Woolwich"],
-  "Northern beaches & north": ["Manly","Avalon Beach","Berowra Waters"],
-  "Western Sydney": ["Parramatta","Auburn","Blacktown","Badgerys Creek"],
-  "South & south-west": ["Bankstown","Airds"],
-};
 
 /* Illustration assets: one external WebP per suburb (small file, real art on the live site). */
 const ART = {
@@ -502,12 +510,380 @@ const DOODLES = {
   nessie:   [ [[.05,.6],[.15,.6]], [[.15,.6],[.22,.48],[.3,.6]], [[.3,.6],[.4,.5],[.5,.6]], [[.5,.6],[.6,.52],[.7,.6]], [[.7,.6],[.76,.4],[.78,.28]], circle(.81,.24,.05), [[.84,.25],[.91,.27]], circle(.81,.22,.008,6), [[.78,.19],[.76,.14]], [[.83,.19],[.85,.14]], [[.9,.6],[.95,.6]], [[.05,.67],[.95,.67]] ]
 };
 
+/* Artist narratives: provided copy and researched interpretations of the existing artwork. */
+const STORIES = {
+  "Bondi Beach": {
+    "title": "A beach that will not stay inside its picture",
+    "intro": "In recent Reddit discussions about Bondi Beach, I found the attraction of living beside the ocean tangled with complaints about crowds, expensive homes and the journey into town. Public posts about sunrise running add another layer: the beach is both a shared daily ritual and an image people send around the world. I gathered those tensions inside a blue computer, then let the ocean escape.",
+    "introRefs": [
+      0,
+      1
+    ],
+    "items": [
+      {
+        "label": "The enormous blue computer.",
+        "text": "The original iMac really did arrive in a colour called Bondi Blue. I took that unlikely connection literally and put the beach back inside the machine. A place that lent its name to a piece of technology now inhabits its own souvenir: the sea has moved into the object that borrowed its colour.",
+        "refs": [
+          2
+        ]
+      },
+      {
+        "label": "The wave breaking through the screen.",
+        "text": "The arguments I read kept slipping between the beautiful image of Bondi and the experience of being there. I broke the frame with a wave. Its water cannot be scrolled past or tidied into a rectangle; the postcard has acquired weight, noise and the ability to wet the floor.",
+        "refs": [
+          0
+        ]
+      },
+      {
+        "label": "The pale Bondi Pavilion.",
+        "text": "The Pavilion's current programme includes art, concerts and opportunities for local creatives. I placed its low, welcoming façade at the centre of the beach, beneath the taller buildings. In a neighbourhood so often treated as a view, this is a place where people can make something together. It gives the picture a room behind its face.",
+        "refs": [
+          3
+        ]
+      },
+      {
+        "label": "The crowded row of homes.",
+        "text": "People considering a move to Bondi quickly begin talking about rent and what they can afford. I compressed the apartments behind the sand, window beside window. Every bright square suggests a private life looking out at the same public ocean. The horizon is enormous; a room from which to see it can feel very small.",
+        "refs": [
+          0
+        ]
+      },
+      {
+        "label": "The lookout and red-and-yellow flags.",
+        "text": "I gave these small signs strong colours so that they can hold their own against the blue. Their role in my composition is care: somebody is watching while somebody else plays. The wave may be the largest character in the drawing, but I wanted the smallest marks to carry responsibility for the people beneath it."
+      },
+      {
+        "label": "The straight blue lanes of Icebergs.",
+        "text": "Beside the tumbling ocean, I drew a rectangle of water measured into lanes. I wanted two kinds of freedom beside one another: the wave choosing its own shape, and a swimmer choosing to repeat the same length. The pool is the neighbourhood's quiet grid, laid against a sea that refuses to draw straight lines."
+      },
+      {
+        "label": "The cable becoming a coastal path.",
+        "text": "Posts about the early running crowds made the path feel like a social connection as much as a route. I uncoiled the computer cable and set tiny people moving along it towards the rocks. The machine is powered by ordinary bodies: a morning walk, a run with somebody else, a reason to leave the house.",
+        "refs": [
+          1
+        ]
+      },
+      {
+        "label": "The loose blue marks outside the shell.",
+        "text": "I left droplets and colour tests beyond the computer, with part of its casing still in pencil. They are the sea's spare vocabulary, waiting outside the finished image. However recognisable Bondi becomes, I wanted something to remain unsettled: another shade of water, another person's morning, a place still larger than its picture."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Reddit — Moving to Sydney: Bondi, Coogee and Manly (2026)",
+        "url": "https://www.reddit.com/r/SydneyScene/comments/1tgvp6w/moving_to_sydney_stuck_between_bondi_coogee_and/"
+      },
+      {
+        "title": "Public run-club posts and local reactions, reported 8 February 2026",
+        "url": "https://www.news.com.au/lifestyle/real-life/news-life/crazy-6am-clip-exposes-growing-divide-among-bondi-residents/news-story/c37f09751c6ff6df6a88c6d819eb010b"
+      },
+      {
+        "title": "Centre for Computing History — original Bondi Blue iMac",
+        "url": "https://www.computinghistory.org.uk/det/496/Apple-iMac-G3-(Tray-Loading-Bondi-Blue)/"
+      },
+      {
+        "title": "Bondi Pavilion — current artistic programme and local creative collaborations",
+        "url": "https://www.bondipavilion.com.au/whats_on"
+      }
+    ],
+    "researchedAt": "2026-09-07"
+  },
+  "Sydney": {
+    "title": "The city keeps more than one time",
+    "intro": "In recent discussions about central Sydney, I found people praising changes to public transport and the experience of walking through the city, while disagreeing about what remains of its life after dark. Some describe an early-rising city; others point visitors towards music and late nights. I imagined the centre as an ornate clock whose rooms are occupied by people keeping different hours.",
+    "introRefs": [
+      0,
+      1,
+      2
+    ],
+    "items": [
+      {
+        "label": "The tall building opened like a cabinet.",
+        "text": "I peeled away the façade to bring offices, shops, beds and dining tables into the same view. The centre is often described through its buildings, but I wanted to show what fills them. Its elegant shell holds many modest necessities: earning a living, buying something, eating, finding somewhere to sleep."
+      },
+      {
+        "label": "The suspended clock, half daylight and half night.",
+        "text": "The debate about Sydney's evenings suggested a clock that could not settle on one time. I divided its face between light and darkness, then put people inside both halves. Someone's city is closing just as somebody else's begins. I wanted the hands to measure those overlapping lives as much as the passing hours.",
+        "refs": [
+          1,
+          2
+        ]
+      },
+      {
+        "label": "The long street of pedestrians.",
+        "text": "George Street's transformation has given the centre more room for walking, sitting and dining. I stretched that public space into a thin stage beneath the building. Each figure can move at a different pace. After the vertical discipline of desks and floors, the street becomes a sentence people are free to punctuate for themselves.",
+        "refs": [
+          3
+        ]
+      },
+      {
+        "label": "The grey road curling away with its cars.",
+        "text": "I treated the old traffic surface as something that could be lifted like a strip of paper. The little cars leave with it. This is my exaggerated version of making space for people: the city takes off a heavy coat and discovers that, underneath, it has feet.",
+        "refs": [
+          3
+        ]
+      },
+      {
+        "label": "The red tram and the train below ground.",
+        "text": "In a discussion about the last decade, public transport appeared as one of Sydney's most visible changes. I separated the two vehicles vertically, letting one pass through the daylight while the other runs beneath the drawing. They are different parts of the same mechanism, carrying people into rooms that would otherwise remain empty.",
+        "refs": [
+          0
+        ]
+      },
+      {
+        "label": "The ferry sailing from an upper floor.",
+        "text": "I lifted a ribbon of harbour water to the roof and let a ferry depart from the building itself. It compresses a familiar Sydney transition: leaving the density of the centre and suddenly finding open water. The office has grown a tiny wharf. Beyond the last appointment, the horizon is still taking passengers."
+      },
+      {
+        "label": "The blue stream beneath the machinery.",
+        "text": "The Tank Stream still survives beneath central Sydney, and recent Sydney Water work is conserving part of its culvert. I brought the hidden water back into view. It slips past the transport machinery like an older memory, reminding me that this place had water, Country and human lives long before it had a working day.",
+        "refs": [
+          4
+        ]
+      },
+      {
+        "label": "The sandstone ledge and its seated figures.",
+        "text": "Under all the movement, I left two people beside the water. They are the small pause on which the composition rests. A city can count passengers, working hours and passing trade; I wanted it also to contain a moment that contributes nothing to the clock, except somebody being glad to sit down."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Reddit — How Sydney has changed in the last decade (2026)",
+        "url": "https://www.reddit.com/r/sydney/comments/1qg3fd9/what_are_some_of_the_most_significant_ways_sydney/"
+      },
+      {
+        "title": "Reddit — Discussion of Sydney's evening and morning culture (2026)",
+        "url": "https://www.reddit.com/r/sydney/comments/1qigtin/end_of_an_era_last_drinks_for_remaining_lockout/"
+      },
+      {
+        "title": "Reddit — Sydney nightlife and live-music suggestions (March 2026)",
+        "url": "https://www.reddit.com/r/AskAnAustralian/comments/1s4p5es/sydney_nightlife/"
+      },
+      {
+        "title": "City of Sydney — George Street pedestrian boulevard",
+        "url": "https://www.cityofsydney.nsw.gov.au/improving-streets-public-spaces/george-street-pedestrian-boulevard-devonshire-street-public-space"
+      },
+      {
+        "title": "Sydney Water — Tank Stream conservation, August–October 2025",
+        "url": "https://www.sydneywater.com.au/about-us/our-publications/reports-publications/waterwrap/waterwrap-aug-oct-2025.html"
+      }
+    ],
+    "researchedAt": "2026-09-07"
+  },
+  "Balmain": {
+    "title": "A village carried by its working past",
+    "intro": "In a recent Reddit discussion about spending a day in Balmain, people suggested old pubs, bakeries, bookshops, a ferry arrival and long walks around the peninsula. Following those routes through local history led me to docks, organised labour and a coal mine. I imagined the present-day village resting inside a great iron vessel, with the work that helped shape it still visible beneath its streets.",
+    "introRefs": [
+      0,
+      1,
+      2
+    ],
+    "items": [
+      {
+        "label": "The enormous riveted hull.",
+        "text": "Mort's Dock made shipbuilding and repair part of Balmain's identity. I enlarged that working world until it could carry houses, shops and trees. The neighbourhood becomes a vessel with its past built into the sides. Its passengers may have changed, but they are still travelling inside an inherited structure.",
+        "refs": [
+          1
+        ]
+      },
+      {
+        "label": "The cottages and narrow shopping street.",
+        "text": "The suggestions I read moved easily between a bakery, a bookshop and a walk. I gathered the small buildings close together on the deck, keeping doors and windows at a human scale. They form a little world of repeated encounters, where the journey between errands can become part of the pleasure of living.",
+        "refs": [
+          0
+        ]
+      },
+      {
+        "label": "The pub rooms and outdoor tables.",
+        "text": "Old pubs appeared again and again in the conversation, including places tucked into quieter streets. I opened one room so its table could be seen from outside. Here, the neighbourhood is held together by the act of sitting with other people: a public room in which nobody has to be the host.",
+        "refs": [
+          0
+        ]
+      },
+      {
+        "label": "The workers inside the hull.",
+        "text": "The heritage account of Mort's Dock describes foundries, engineering and a substantial workforce. I cut through the iron to reveal hands, tools and a boat under construction. I wanted the comfortable streets above to remain connected to physical effort. Their foundations contain shoulders, skill and the sound of somebody arriving for a shift.",
+        "refs": [
+          1
+        ]
+      },
+      {
+        "label": "The meeting around the lower table.",
+        "text": "Balmain's industrial history is also a history of organised labour. I placed a discussion beside the workshop, inside the same body of the drawing. Work produces more than objects here; it produces a collective voice. The table is a small engine whose moving parts are people deciding what they can ask for together.",
+        "refs": [
+          1
+        ]
+      },
+      {
+        "label": "The shaft dropping into the ground.",
+        "text": "Reading about Balmain Colliery, on the peninsula at Birchgrove, changed my sense of its depth. Beneath streets now associated with waterfront homes there was once a mining world. I opened a shaft under the hull so that the drawing could descend into that hidden labour. The harbour view has a dark vertical memory.",
+        "refs": [
+          2,
+          3
+        ]
+      },
+      {
+        "label": "The timber enclosure full of swimmers.",
+        "text": "A suggested walking route passed Dawn Fraser Baths, another long-lived place on the peninsula. I attached the blue enclosure to the vessel like a second, lighter room. Against all the iron and work below, people float. The same waterfront that supported industry also holds an ordinary afternoon's pleasure.",
+        "refs": [
+          0,
+          4
+        ]
+      },
+      {
+        "label": "The people at the great lever and the unfinished city beyond.",
+        "text": "I put several generations beside a mechanism too large for one person to move easily. To me, they are negotiating how an inherited place changes. The cranes and pencilled buildings at the edge remain unresolved, while the village is already full of colour. I wanted the future to look like a drawing people still have a hand in."
+      }
+    ],
+    "sources": [
+      {
+        "title": "Reddit — Spending a day in Balmain: pubs, shops, ferries and walks (2026)",
+        "url": "https://www.reddit.com/r/sydney/comments/1vlealo/if_you_were_to_spend_the_day_in_balmain_what/"
+      },
+      {
+        "title": "NSW State Heritage Inventory — Mort's Dock",
+        "url": "https://apps.environment.nsw.gov.au/dpcheritageapp/ViewHeritageItemDetails.aspx?ID=5061224"
+      },
+      {
+        "title": "The Dictionary of Sydney — Balmain Colliery",
+        "url": "https://dictionaryofsydney.org/entry/balmain_colliery"
+      },
+      {
+        "title": "ABC — Waterfront homes on the former coal-mine site, February 2026",
+        "url": "https://www.abc.net.au/news/2026-02-15/sydney-houses-now-on-former-balmain-coal-mine-birchgrove-history/106219352"
+      },
+      {
+        "title": "Inner West Council — Dawn Fraser Baths history, updated March 2026",
+        "url": "https://www.innerwest.nsw.gov.au/dawn-fraser-baths/history"
+      }
+    ],
+    "researchedAt": "2026-09-07"
+  },
+  "Barangaroo": {
+    "title": "A waterfront unfolding",
+    "intro": "In discussions about Barangaroo, I found people admiring the new waterfront, swimming, complaining about the wind between the towers and debating future development. Together, these voices suggested a place still changing its shape. I built the drawing around that transformation.",
+    "items": [
+      {
+        "label": "The enormous rusty shipping container.",
+        "text": "This really was a container terminal. I enlarged a container until it could hold an entire neighbourhood, making the past a physical shell around the present. A glass city grows out of an iron box, as though its cargo had become another civilisation during the voyage."
+      },
+      {
+        "label": "The open door.",
+        "text": "Debates about public space drew my attention to the gesture of opening itself. I lowered the door towards the water: a former working port unfolding to welcome people. It resembles the heavy tongue of the old harbour, now learning to say “walk”, “meet” and “swim”."
+      },
+      {
+        "label": "The glass towers and Crown.",
+        "text": "Discussions about development reveal how many different expectations people place on this waterfront. I stretched the buildings upwards, giving them an almost crystalline form. They express the city’s ambition to grow, catch the light and be noticed from the opposite shore."
+      },
+      {
+        "label": "The golden sandstone steps.",
+        "text": "On Reddit, I even found someone asking what the hill at Barangaroo Reserve was made of. That curiosity about the construction of nature stayed with me: this shoreline was deliberately recreated. I drew the stone in large blocks, as though the landscape still remembered the hands that assembled it."
+      },
+      {
+        "label": "The trees between the stones.",
+        "text": "Native plants became part of the reconstructed shoreline. I let them slip between rigid structures and gather around the buildings. In my metaphor, vegetation slowly inhabits the new architecture, trying it on as the sea might try on something left upon the shore."
+      },
+      {
+        "label": "The swimming enclosure and its tiny swimmers.",
+        "text": "In discussions about Marrinawi Cove, people describe simple pleasures: swimming in the city, sitting beside the water, reading. I gave the swimming area a prominent place. Among immense financial and architectural ambitions, a person keeps their small claim to cool water."
+      },
+      {
+        "label": "The ferry, metro and pedestrians.",
+        "text": "Conversations about the neighbourhood keep returning to how people reach it and move beyond it. I gathered different kinds of movement at the towers’ feet. They make the composition permeable: the city enters through small doorways, while photographs tend to notice the large buildings."
+      },
+      {
+        "label": "The basket and the pencilled shoreline.",
+        "text": "The neighbourhood’s name leads back to the woman Barangaroo, while the history of the land belongs to Gadigal Country. I connect these foreground objects with the memory of an earlier shoreline. The towers are already coloured in; the older landscape remains a fine drawing, still visible beneath the new picture."
+      }
+    ],
+    "provenance": "Text supplied by the artist"
+  },
+  "Camperdown": {
+    "title": "A neighbourhood in circulation",
+    "intro": "In discussions about Camperdown, I noticed how often people describe the neighbourhood through proximity: to the university, buses, and the cafés and streets of neighbouring Glebe and Newtown. Alongside this are complaints about Parramatta Road and its heavy traffic. To me, Camperdown becomes a living system connected by routes.",
+    "items": [
+      {
+        "label": "The sandstone university.",
+        "text": "In student discussions, finding somewhere to live is closely tied to getting to class. The university therefore occupies a large part of the drawing: it attracts people and organises their everyday lives. I gave it the weight of a stone mountain in which thoughts accumulate."
+      },
+      {
+        "label": "The red-brick hospital and its newer buildings.",
+        "text": "RPA is another major centre of gravity, and its redevelopment continues. I brought its older and contemporary architecture together. To me, this is a building growing while it works: the city alters its own body while continuing to care for human bodies."
+      },
+      {
+        "label": "The arches between the two halves.",
+        "text": "Teaching and research connect the university and hospital. I made that relationship visible by stretching architectural bridges across the composition. Beneath them, thought seems to cross the street and become action: a diagnosis, a procedure, someone’s chance to live restored."
+      },
+      {
+        "label": "The burgundy loop.",
+        "text": "Descriptions of the neighbourhood’s convenience often become descriptions of a journey—where you can walk or catch a bus. I drew a continuous route through the whole picture. It resembles a blood vessel, circulating students, staff, visitors, a bus and an ambulance."
+      },
+      {
+        "label": "The small terrace houses.",
+        "text": "Conversations about living here restore a human scale to the neighbourhood. I placed the houses along the edges of the large institutions: behind every façade is a private morning and evening. They are little pockets of quiet sewn into the city’s enormous working clothes."
+      },
+      {
+        "label": "The road in the foreground.",
+        "text": "In discussions about Parramatta Road, people write about traffic and empty shops. The asphalt therefore forms a heavy band across the bottom of the composition. It brings people in while dividing the space; the whole neighbourhood seems to stand on a moving belt that is difficult to stop."
+      },
+      {
+        "label": "The dense trees and green courtyards.",
+        "text": "People discussing life near the city centre value places to walk and linger. I gathered greenery around the architecture in thick clouds. Between a lecture, a shift and a bus, a person needs an interval in which nothing is required of them."
+      },
+      {
+        "label": "The blue creek beneath the surface.",
+        "text": "The history of Orphan School Creek suggested another, hidden route. I opened the ground and let the water emerge beneath the asphalt. Above it, movement follows timetables; below, an older rhythm survives—a thin blue sentence beneath a densely written page."
+      }
+    ],
+    "provenance": "Text supplied by the artist"
+  },
+  "Chippendale": {
+    "title": "A neighbourhood in a pocket",
+    "intro": "In posts and discussions about Chippendale, I found pleasures and concerns packed closely together: food beneath lanterns, art, the search for student accommodation, conversations about repairs at One Central Park. I wanted to gather these different lives into one small, personal space. That is how I read the metaphor of a neighbourhood in a pocket.",
+    "items": [
+      {
+        "label": "The enormous grey jacket and its pocket.",
+        "text": "Within this small neighbourhood, home, study, a gallery and dinner sit close together. I placed them in a pocket—the place where we keep what we need within reach. The grey jacket became the scale of the larger city, its colourful contents an unexpected inner life."
+      },
+      {
+        "label": "One Central Park’s vertical garden.",
+        "text": "The striking façade attracts attention, while discussions about the building raise questions about maintenance and repairs. I see the green tower as a living, demanding structure. It grows from the pocket like a plant someone brought home, only to discover that it is now taller than the house."
+      },
+      {
+        "label": "The hand, mirror and sunlight.",
+        "text": "Here, the fantasy rests on One Central Park’s real system of mirrors, which redirects sunlight into shaded spaces. I turned it into a human gesture. The dense city creates its own shadow, then reaches towards the sky to return a little sunlight to those below."
+      },
+      {
+        "label": "The brick factory and chimney.",
+        "text": "Chippendale’s industrial history, including Kent Brewery, helps explain its dense architectural fabric. I kept the chimney beside the green tower. In my composition, the old industry remains inside the new life, like an inherited tool in another generation’s pocket."
+      },
+      {
+        "label": "The white rabbit carrying a painting.",
+        "text": "This refers to White Rabbit Gallery and its contemporary Chinese art. I gave the gallery’s name a body and let it step outside. The rabbit carries a painting through the neighbourhood, as though art had become an ordinary local errand—as natural as bringing home bread."
+      },
+      {
+        "label": "The red ribbon of Spice Alley.",
+        "text": "On Instagram, this place unfolds through lanterns, food and tables where people gather. I lifted the laneway off the ground and made it a flexible red strip. It resembles the jacket’s festive lining, turned inside out to invite everyone to dinner."
+      },
+      {
+        "label": "The terrace houses and footpath gardens.",
+        "text": "Chippendale has a tradition of residents tending gardens along its streets. I kept greenery at the level of the small houses, too. Beside the famous vertical garden is an everyday act of care: someone steps through their front door to water their little piece of the city."
+      },
+      {
+        "label": "The people with backpacks, a box and a suitcase.",
+        "text": "In student discussions, Chippendale appears among the places to look for accommodation near university. I connected these figures with arrival and settling in. Someone is already following a familiar route; someone else has just carried their life here in a box. The city’s pocket still has room for another story."
+      }
+    ],
+    "provenance": "Text supplied by the artist"
+  }
+};
+
 /* ---------- suburb autocomplete ---------- */
 const listEl = document.getElementById('list');
 const qEl = document.getElementById('q');
 const suggestionsEl = document.getElementById('suggestions');
 const searchStatusEl = document.getElementById('search-status');
-const SUBURBS = [...new Set([...Object.values(REGIONS).flat(), ...Object.keys(ART)])].sort((a,b)=>a.localeCompare(b));
+const SUBURBS = Object.keys(ART).sort((a,b)=>a.localeCompare(b));
 let current = null;
 let matches = [], activeMatch = -1;
 
@@ -565,6 +941,32 @@ qEl.addEventListener('keydown',event=>{
 });
 
 /* ---------- drawing engine ---------- */
+const storyEl=document.getElementById('story');
+function renderStory(name){
+  storyEl.replaceChildren();
+  const story=STORIES[name];storyEl.hidden=!story;
+  if(!story)return;
+  const refs=(parent,indices=[])=>{
+    if(!indices.length)return;
+    const sup=document.createElement('sup');sup.className='story-ref';
+    for(const index of indices){
+      const source=story.sources[index],link=document.createElement('a');
+      link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';
+      link.textContent=String(index+1);link.title=source.title;link.setAttribute('aria-label',source.title);
+      sup.appendChild(link);
+    }
+    parent.appendChild(sup);
+  };
+  const kicker=document.createElement('p');kicker.className='story-kicker';kicker.textContent=name+' · From my sketchbook';
+  const title=document.createElement('h2');title.id='story-title';title.textContent=story.title;
+  const intro=document.createElement('p');intro.className='story-intro';intro.textContent=story.intro;refs(intro,story.introRefs);
+  const items=document.createElement('ol');
+  for(const item of story.items){
+    const li=document.createElement('li'),label=document.createElement('strong');
+    label.textContent=item.label;li.append(label,' '+item.text);refs(li,item.refs);items.appendChild(li);
+  }
+  storyEl.append(kicker,title,intro,items);
+}
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const sheet = document.getElementById('sheet');
@@ -702,7 +1104,7 @@ function setSize(){
 }
 
 function loadImage(src){
-  return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
+  return new Promise((res,rej)=>{ const im=new Image(); if(/^https?:/i.test(src))im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=rej; im.src=src; });
 }
 function offscreen(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
 
@@ -1158,9 +1560,9 @@ const PHASES = [ // seconds
 let resumeDrawing=null,lastPrepared=null;
 
 async function choose(name){
+  if(!Object.prototype.hasOwnProperty.call(ART,name))return;
   current=name;qEl.value=name;closeSuggestions();
-  const src = ART[name] || ART[DEMO];
-  noteEl.textContent = ART[name] ? "" : `The ${name} illustration hasn't been painted yet — this is the ${DEMO} artwork as a demo.`;
+  const src=ART[name];noteEl.textContent='';renderStory(name);
   if (innerWidth<=860) sheet.scrollIntoView({behavior: reduced?'auto':'smooth', block:'start'});
   await draw(name, src);
 }
