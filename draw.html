@@ -548,9 +548,10 @@ class DrawingSound {
       sketch:{frequency:130,cutoff:1800,level:0.22},
       line:{frequency:180,cutoff:2300,level:0.16},
       marker:{frequency:85,cutoff:1050,level:0.24},
-      eraser:{frequency:65,cutoff:720,level:0.25},
-      pen:{frequency:150,cutoff:1950,level:0.18}
+      eraser:{frequency:65,cutoff:720,level:0.25}
     };
+    // Lettering uses the same broad, soft felt-tip texture as colouring.
+    this.profiles.pen=this.profiles.marker;
   }
   paperBuffer(context){
     const rate=context.sampleRate, length=Math.round(rate*8), fade=Math.round(rate*0.3);
@@ -616,11 +617,21 @@ class DrawingSound {
       return false;
     }
   }
+  holdVolume(now){
+    const gain=this.volume.gain;
+    // Retarget from the currently audible level, including during a fade.
+    // Cancelling an in-flight envelope must never reset its starting level.
+    if(typeof gain.cancelAndHoldAtTime==='function')gain.cancelAndHoldAtTime(now);
+    else{
+      const level=gain.value;
+      gain.cancelScheduledValues(now);gain.setValueAtTime(level,now);
+    }
+  }
   silence(immediate=false){
     this.previous=null;
     if(!this.context||!this.volume)return;
     const now=this.context.currentTime;
-    this.volume.gain.cancelScheduledValues(now);
+    this.holdVolume(now);
     this.volume.gain.setTargetAtTime(0,now,immediate?0.012:0.04);
   }
   disable(){this.enabled=false;this.silence(true);}
@@ -630,15 +641,17 @@ class DrawingSound {
     }
     const profile=this.profiles[kind];if(!profile){this.silence();return;}
     const previous=this.previous;
-    const speed=previous&&previous.kind===kind?Math.hypot(cursor.x-previous.x,cursor.y-previous.y)/Math.max(delta,1/240)/W:0.5;
+    // The lettering path advances at constant ink speed. Its jumps between
+    // letters are pen lifts, not pressure spikes that should grow louder.
+    const speed=kind==='pen'?0.7:previous&&previous.kind===kind?Math.hypot(cursor.x-previous.x,cursor.y-previous.y)/Math.max(delta,1/240)/W:0.5;
     this.previous={x:cursor.x,y:cursor.y,kind};
     this.motion+=(Math.min(1,speed/2)-this.motion)*(1-Math.exp(-delta/0.12));
     const now=this.context.currentTime, level=profile.level*(0.58+0.42*this.motion);
     this.tone.frequency.setTargetAtTime(profile.frequency,now,0.06);
     this.softener.frequency.setTargetAtTime(profile.cutoff,now,0.06);
     if(this.panner)this.panner.pan.setTargetAtTime(Math.max(-0.16,Math.min(0.16,(cursor.x/W-0.5)*0.32)),now,0.10);
-    this.volume.gain.cancelScheduledValues(now);
-    this.volume.gain.setTargetAtTime(level,now,0.025);
+    this.holdVolume(now);
+    this.volume.gain.setTargetAtTime(level,now,kind==='pen'?0.05:0.025);
     // A missed frame must never leave a scratch playing indefinitely.
     this.volume.gain.setTargetAtTime(0,now+0.09,0.04);
   }
