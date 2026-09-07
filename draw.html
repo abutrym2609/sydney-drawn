@@ -517,7 +517,7 @@ function renderList(filter=""){
       const b = document.createElement('button');
       b.type='button'; b.textContent=s; b.dataset.suburb=s;
       if (ART[s]) b.classList.add('has-art');
-      if (s===current) b.classList.add('on');
+      if (s===current){ b.classList.add('on'); b.setAttribute('aria-current','true'); }
       const d=document.createElement('span'); d.className='dot'; b.appendChild(d);
       b.addEventListener('click', ()=>choose(s));
       listEl.appendChild(b); count++;
@@ -543,9 +543,9 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let W=0,H=0, raf=0, job=0;
 
 function setSize(){
-  const r = sheet.getBoundingClientRect();
-  const dpr = Math.min(devicePixelRatio||1, 2);
-  W = Math.round(r.width*dpr); H = Math.round(r.height*dpr);
+  // Keep the artwork and export sharp and stable when the viewport changes.
+  // CSS scales this fixed-aspect sheet; resizing never clears an active drawing.
+  W=1600; H=Math.round(W*811/1939);
   cv.width=W; cv.height=H;
 }
 
@@ -554,29 +554,6 @@ function loadImage(src){
 }
 function offscreen(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
 
-/* value noise, 2 octaves, returns Float32Array in [0,1] */
-function noiseField(w,h,cells,seed){
-  let s=seed>>>0; const rnd=()=>{ s^=s<<13; s>>>=0; s^=s>>>17; s^=s<<5; s>>>=0; return (s>>>0)/4294967296; };
-  const gw=cells+2, gh=Math.ceil(cells*h/w)+2;
-  const g=new Float32Array(gw*gh); for(let i=0;i<g.length;i++) g[i]=rnd();
-  const out=new Float32Array(w*h);
-  const sm=t=>t*t*(3-2*t);
-  for(let y=0;y<h;y++){ const fy=y/h*(gh-1); const y0=fy|0, ty=sm(fy-y0);
-    for(let x=0;x<w;x++){ const fx=x/w*(gw-1); const x0=fx|0, tx=sm(fx-x0);
-      const a=g[y0*gw+x0], b=g[y0*gw+x0+1], c=g[(y0+1)*gw+x0], d=g[(y0+1)*gw+x0+1];
-      out[y*w+x]=(a*(1-tx)+b*tx)*(1-ty)+(c*(1-tx)+d*tx)*ty; } }
-  return out;
-}
-function combine(w,h,parts){ // parts: [{field, weight}] + optional fn(x,y) base
-  const out=new Float32Array(w*h);
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ let v=0; const i=y*w+x;
-    for(const p of parts) v+= p.fn ? p.fn(x/w,y/h)*p.weight : p.field[i]*p.weight;
-    out[i]=v; }
-  // normalise to 0..1
-  let mn=1e9,mx=-1e9; for(const v of out){ if(v<mn)mn=v; if(v>mx)mx=v; }
-  for(let i=0;i<out.length;i++) out[i]=(out[i]-mn)/(mx-mn);
-  return out;
-}
 
 /* ---- sketch vectorizer: turn the illustration's edges into ordered pencil strokes ---- */
 function skBoxBlur(a,w,h,r,passes){
@@ -636,113 +613,139 @@ function skOrder(polys){
     let p=polys[best]; if(rev)p=p.slice().reverse(); used[best]=1; out.push(p); cx=p[p.length-1][0]; cy=p[p.length-1][1]; }
   return out;
 }
-function makeSketchStrokes(base){
-  const sw=Math.min(600,W), sh=Math.max(1,Math.round(H*sw/W));
+function makeSketchStrokes(base,detail=false){
+  const sw=Math.min(detail?900:600,W), sh=Math.max(1,Math.round(H*sw/W));
   const oc=offscreen(sw,sh), o=oc.getContext('2d'); o.imageSmoothingEnabled=true;
   o.fillStyle='#fff'; o.fillRect(0,0,sw,sh); o.drawImage(base,0,0,sw,sh);
   const d=o.getImageData(0,0,sw,sh).data, g=new Float32Array(sw*sh);
   for(let i=0;i<sw*sh;i++) g[i]=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];
-  skBoxBlur(g,sw,sh,2,3);
-  const bin=new Uint8Array(sw*sh), thr=34;
+  skBoxBlur(g,sw,sh,detail?1:2,detail?1:3);
+  const bin=new Uint8Array(sw*sh), thr=detail?55:34;
   for(let y=1;y<sh-1;y++)for(let x=1;x<sw-1;x++){ const i=y*sw+x;
     const gx=-g[i-sw-1]-2*g[i-1]-g[i+sw-1]+g[i-sw+1]+2*g[i+1]+g[i+sw+1];
     const gy=-g[i-sw-1]-2*g[i-sw]-g[i-sw+1]+g[i+sw-1]+2*g[i+sw]+g[i+sw+1];
     if(Math.hypot(gx,gy)>thr) bin[i]=1; }
   skThin(bin,sw,sh);
-  let polys=skTrace(bin,sw,sh).map(p=>skSimplify(p,1.5)).filter(p=>skLen(p)>=10);
+  let polys=skTrace(bin,sw,sh).map(p=>skSimplify(p,detail?0.65:1.2)).filter(p=>skLen(p)>=(detail?5:10));
   const fx=W/sw, fy=H/sh;
   polys=polys.map(p=>p.map(q=>[q[0]*fx,q[1]*fy]));
   polys=skOrder(polys);
-  const segs=[]; let total=0;
-  for(let j=0;j<polys.length;j++){ const p=polys[j]; for(let i=1;i<p.length;i++){ const L=Math.hypot(p[i][0]-p[i-1][0],p[i][1]-p[i-1][1]); if(L>0){ segs.push({a:p[i-1],b:p[i],L,from:total}); total+=L; } } }
-  return {polys,segs,total};
+  return polys;
 }
 
-function buildLayers(img){
-  const base=offscreen(W,H); const b=base.getContext('2d');
-  b.fillStyle='#FFFFFF'; b.fillRect(0,0,W,H);
-  // fit image into sheet, respecting aspect
-  const s=Math.min(W/img.width,H*0.82/img.height); const iw=img.width*s, ih=img.height*s;
-  b.drawImage(img,(W-iw)/2,(H*0.82-ih)/2,iw,ih);
-  const fit={ox:(W-iw)/2,oy:(H*0.82-ih)/2,iw,ih};
-  const src=b.getImageData(0,0,W,H).data;
-
-  // luminance
-  const lum=new Float32Array(W*H);
-  for(let i=0;i<W*H;i++) lum[i]=(0.299*src[i*4]+0.587*src[i*4+1]+0.114*src[i*4+2]);
-
-  // sobel edges -> linework layer
-  const line=offscreen(W,H); const lc=line.getContext('2d');
-  const ld=lc.createImageData(W,H); const L=ld.data;
-  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
-    const i=y*W+x;
-    const gx=-lum[i-W-1]-2*lum[i-1]-lum[i+W-1]+lum[i-W+1]+2*lum[i+1]+lum[i+W+1];
-    const gy=-lum[i-W-1]-2*lum[i-W]-lum[i-W+1]+lum[i+W-1]+2*lum[i+W]+lum[i+W+1];
-    let m=Math.sqrt(gx*gx+gy*gy)/4; // 0..~255
-    let a=Math.min(255, m*1.6);
-    if (a<18) a=0;
-    L[i*4]=38; L[i*4+1]=37; L[i*4+2]=34; L[i*4+3]=a;
-  }
-  lc.putImageData(ld,0,0);
-
-  // rough sketch layer: only the big shapes, computed at half size on blurred tone → soft, thicker, lighter lines
-  const hw=W>>1, hh=H>>1; const lo=new Float32Array(hw*hh);
-  for(let y=0;y<hh;y++)for(let x=0;x<hw;x++){ const i=(y*2)*W+x*2; lo[y*hw+x]=(lum[i]+lum[i+1]+lum[i+W]+lum[i+W+1])/4; }
-  const bl=new Float32Array(hw*hh); const R=2;
-  for(let pass=0;pass<2;pass++){ const src2=pass?bl:lo, dst=pass?lo:bl;
-    for(let y=0;y<hh;y++)for(let x=0;x<hw;x++){ let s=0,n=0; for(let k=-R;k<=R;k++){ const xx=x+k; if(xx>=0&&xx<hw){s+=src2[y*hw+xx];n++;} } dst[y*hw+x]=s/n; }
-    for(let y=0;y<hh;y++)for(let x=0;x<hw;x++){ let s=0,n=0; for(let k=-R;k<=R;k++){ const yy=y+k; if(yy>=0&&yy<hh){s+=dst[yy*hw+x];n++;} } src2[y*hw+x]=s/n; }
-  }
-  const sk=offscreen(hw,hh); const skc=sk.getContext('2d'); const kd=skc.createImageData(hw,hh); const K=kd.data;
-  for(let y=1;y<hh-1;y++)for(let x=1;x<hw-1;x++){ const i=y*hw+x;
-    const gx=-lo[i-hw-1]-2*lo[i-1]-lo[i+hw-1]+lo[i-hw+1]+2*lo[i+1]+lo[i+hw+1];
-    const gy=-lo[i-hw-1]-2*lo[i-hw]-lo[i-hw+1]+lo[i+hw-1]+2*lo[i+hw]+lo[i+hw+1];
-    let a=Math.sqrt(gx*gx+gy*gy)/4*2.4; if(a<45) a=0; K[i*4]=96;K[i*4+1]=94;K[i*4+2]=90;K[i*4+3]=Math.min(190,a); }
-  skc.putImageData(kd,0,0);
-  const sketch=offscreen(W,H); const skx=sketch.getContext('2d'); skx.imageSmoothingEnabled=true; skx.drawImage(sk,0,0,W,H);
-
-  // graphite shading layer (tonal, no colour)
-  const shade=offscreen(W,H); const sc=shade.getContext('2d');
-  const sd=sc.createImageData(W,H); const S=sd.data;
-  for(let i=0;i<W*H;i++){ const v=lum[i]; const a=Math.max(0,(215-v))*1.05; // darker = more graphite
-    S[i*4]=52; S[i*4+1]=50; S[i*4+2]=46; S[i*4+3]=Math.min(210,a); }
-  sc.putImageData(sd,0,0);
-
-  const _sk=makeSketchStrokes(base);
-  const skc2=sketch.getContext('2d'); skc2.clearRect(0,0,W,H);
-  skc2.strokeStyle='rgb(96,94,90)'; skc2.lineWidth=Math.max(1.4,1.8*(W/1000)); skc2.lineCap='round'; skc2.lineJoin='round'; skc2.globalAlpha=0.9;
-  for(let j=0;j<_sk.polys.length;j++){ const p=_sk.polys[j]; skc2.beginPath(); skc2.moveTo(p[0][0],p[0][1]); for(let i=1;i<p.length;i++)skc2.lineTo(p[i][0],p[i][1]); skc2.stroke(); }
-  skc2.globalAlpha=1;
-  return {base, line, shade, sketch, fit, sketchSegs:_sk.segs, sketchTotal:_sk.total};
-}
-
-/* mask at half res */
-function makeMasks(px){
-  const mw=Math.ceil(W/2), mh=Math.ceil(H/2);
-  // which marker does this pixel need? order the pens: beige → yellow/ochre → red → green → blue/teal → brown → grey/black
-  const pen=new Float32Array(mw*mh);
-  for(let y=0;y<mh;y++)for(let x=0;x<mw;x++){ const i=((y*2)*W+x*2)*4; const r=px[i]/255,g=px[i+1]/255,b=px[i+2]/255;
-    const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,d=mx-mn; const s=d===0?0:d/(1-Math.abs(2*l-1));
-    let hue=0; if(d){ if(mx===r)hue=((g-b)/d+6)%6; else if(mx===g)hue=(b-r)/d+2; else hue=(r-g)/d+4; hue*=60; }
-    let k;
-    if(l>0.82&&s<0.5) k=0;                       // paper-light beige
-    else if(s<0.16) k=6;                          // greys & black
-    else if(hue>=35&&hue<70) k=1;                 // yellow / ochre
-    else if(hue<20||hue>=330) k=2;                // red
-    else if(hue>=70&&hue<170) k=3;                // green
-    else if(hue>=170&&hue<270) k=4;               // blue / teal
-    else k=5;                                     // browns & the rest
-    pen[y*mw+x]=k/6; }
-  const n1=noiseField(mw,mh,9,1234), n2=noiseField(mw,mh,26,777), n3=noiseField(mw,mh,5,42), n4=noiseField(mw,mh,14,99);
-  return {
-    mw,mh,
-    // rough sketch: big loose patches across the whole sheet at once
-    sketch: combine(mw,mh,[{field:n3,weight:0.6},{field:n1,weight:0.3},{fn:(x,y)=>Math.hypot(x-0.5,(y-0.5)*0.6),weight:0.1}]),
-    // details: fine lines pop up around the composition, roughly centre-out
-    line: combine(mw,mh,[{field:n1,weight:0.4},{field:n2,weight:0.25},{fn:(x,y)=>Math.hypot(x-0.5,(y-0.5)*0.6)*1.2,weight:0.35}]),
-    // colour: one marker at a time (pen order), patchy within each pen
-    colour: combine(mw,mh,[{field:pen,weight:0.86},{field:n4,weight:0.09},{field:n2,weight:0.05}])
+// One ordered route drives both the marks and the nib. Pen lifts have their own
+// time on the route, but never leave a line between disconnected contours.
+function planStrokes(strokes){
+  const segments=[]; let total=0, previous=null;
+  const add=(a,b,weight,style,lift=false)=>{
+    if(weight<=0)return;
+    segments.push({a,b,from:total,weight,lift,...style}); total+=weight;
   };
+  for(const stroke of strokes){
+    const points=stroke.points;
+    if(points.length<2)continue;
+    if(previous){
+      const distance=Math.hypot(points[0][0]-previous[0],points[0][1]-previous[1]);
+      if(distance>0.01) add(previous,points[0],Math.min(distance*0.3,W*0.035)+W*0.002,stroke,true);
+    }
+    for(let i=1;i<points.length;i++){
+      add(points[i-1],points[i],Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]),stroke);
+    }
+    previous=points[points.length-1];
+  }
+  return {segments,total};
+}
+function strokeState(plan){ return {plan,index:0,position:0}; }
+function paintStrokes(state,context,progress,cursor){
+  const target=Math.max(state.position,Math.min(1,Math.max(0,progress))*state.plan.total);
+  const segments=state.plan.segments;
+  context.lineCap='round'; context.lineJoin='round';
+  while(state.index<segments.length){
+    const segment=segments[state.index], end=segment.from+segment.weight;
+    if(segment.from>=target)break;
+    const t0=Math.max(0,(state.position-segment.from)/segment.weight);
+    const t1=Math.min(1,(target-segment.from)/segment.weight);
+    const position=t=>[segment.a[0]+(segment.b[0]-segment.a[0])*t,segment.a[1]+(segment.b[1]-segment.a[1])*t];
+    const a=position(t0), b=position(t1);
+    if(!segment.lift && t1>t0){
+      context.strokeStyle=segment.colour; context.lineWidth=segment.width;
+      context.beginPath(); context.moveTo(a[0],a[1]); context.lineTo(b[0],b[1]); context.stroke();
+    }
+    const nib=position(segment.lift?t1*t1*(3-2*t1):t1);
+    cursor.x=nib[0]; cursor.y=nib[1]; cursor.lift=segment.lift;
+    cursor.ink=segment.ink||segment.colour;
+    if(target<end)break;
+    state.index++;
+  }
+  state.position=target;
+}
+function markerFamily(r,g,b){
+  const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;
+  if(min>247)return -1;
+  const light=(max+min)/510;
+  if(light>0.82 && delta<65)return 0;
+  if(delta<28)return 6;
+  let hue=(max===r?((g-b)/delta+6)%6:max===g?(b-r)/delta+2:(r-g)/delta+4)*60;
+  if(hue>=35&&hue<70)return 1;
+  if(hue<20||hue>=330)return 2;
+  if(hue>=70&&hue<170)return 3;
+  if(hue>=170&&hue<270)return 4;
+  return 5;
+}
+function makeMarkerStrokes(base){
+  // Work locally across each patch with overlapping diagonal hatching, then
+  // change pens. Original pixels supply the colour and paper texture.
+  const px=base.getContext('2d').getImageData(0,0,W,H).data, S=W/1000;
+  const families=Array.from({length:7},()=>[]);
+  const step=2*S, rowGap=5*S, tile=100*S;
+  const sample=(x,y)=>{
+    if(x<0||y<0||x>=W||y>=H)return null;
+    const i=(Math.floor(y)*W+Math.floor(x))*4;
+    const r=px[i],g=px[i+1],b=px[i+2];
+    return {family:markerFamily(r,g,b),ink:`rgb(${r},${g},${b})`};
+  };
+  for(let bx=0;bx<W;bx+=tile){
+    const right=Math.min(W,bx+tile);
+    for(let row=-tile*0.2;row<H*0.83;row+=rowGap){
+      let run=null;
+      const flush=()=>{
+        if(!run)return;
+        families[run.family].push({points:[[run.x,run.y],[run.end+step*0.5,run.endY+step*0.1]],colour:'#fff',ink:run.ink,width:7.8*S});
+        run=null;
+      };
+      for(let x=bx;x<right;x+=step){
+        const y=row+(x-bx)*0.2, colour=sample(x,y);
+        if(!colour||colour.family<0){flush();continue;}
+        if(run && (run.family!==colour.family||x-run.x>65*S))flush();
+        if(!run)run={x,y,end:x,endY:y,...colour};
+        else {run.end=x;run.endY=y;}
+      }
+      flush();
+    }
+  }
+  const ordered=[];
+  for(const family of families){
+    // The same nearest-endpoint order used for pencil contours also keeps
+    // adjacent marker strokes together, including their natural return pass.
+    const inks=new Map(family.map(s=>[s.points[0],s.ink]));
+    for(const points of skOrder(family.map(s=>s.points))){
+      // Reversed paths still retain their original endpoint objects.
+      ordered.push({points,colour:'#fff',ink:inks.get(points[0])||inks.get(points[points.length-1]),width:7.8*S});
+    }
+  }
+  return ordered;
+}
+function buildLayers(img,animate=true){
+  const base=offscreen(W,H), b=base.getContext('2d');
+  b.fillStyle='#FFFFFF'; b.fillRect(0,0,W,H);
+  const scale=Math.min(W/img.width,H*0.82/img.height), iw=img.width*scale, ih=img.height*scale;
+  const fit={ox:(W-iw)/2,oy:(H*0.82-ih)/2,iw,ih};
+  b.drawImage(img,fit.ox,fit.oy,iw,ih);
+  if(!animate)return {base,fit};
+  const S=W/1000;
+  const pencil=makeSketchStrokes(base).map((points,i)=>({points,colour:'#99958c',width:S*(1.0+0.18*Math.sin(i*1.7))}));
+  const fineliner=makeSketchStrokes(base,true).map(points=>({points,colour:'#373530',width:0.95*S}));
+  return {base,fit,pencil:planStrokes(pencil),fineliner:planStrokes(fineliner),marker:planStrokes(makeMarkerStrokes(base))};
 }
 
 const GLYPHS = {"A":{w:0.7,s:[[[0,1],[0.35,0],[0.7,1]],[[0.13,0.62],[0.57,0.62]]]}, "B":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.082,0.005],[0.161,0.019],[0.233,0.042],[0.297,0.073],[0.349,0.111],[0.388,0.154],[0.412,0.201],[0.42,0.25],[0.412,0.299],[0.388,0.346],[0.349,0.389],[0.297,0.427],[0.233,0.458],[0.161,0.481],[0.082,0.495],[0,0.5]],[[0,0.48],[0.094,0.485],[0.184,0.5],[0.267,0.524],[0.339,0.556],[0.399,0.596],[0.443,0.641],[0.471,0.689],[0.48,0.74],[0.471,0.791],[0.443,0.839],[0.399,0.884],[0.339,0.924],[0.267,0.956],[0.184,0.98],[0.094,0.995],[0,1]]]}, "C":{w:0.64,s:[[[0.566,0.09],[0.479,0.028],[0.384,0.001],[0.286,0.011],[0.194,0.056],[0.114,0.135],[0.052,0.241],[0.013,0.365],[0,0.5],[0.013,0.635],[0.052,0.759],[0.114,0.865],[0.194,0.944],[0.286,0.989],[0.384,0.999],[0.479,0.972],[0.566,0.91]]]}, "D":{w:0.64,s:[[[0,0],[0,1]],[[0,0],[0.117,0.01],[0.23,0.038],[0.333,0.084],[0.424,0.146],[0.499,0.222],[0.554,0.309],[0.588,0.402],[0.6,0.5],[0.588,0.598],[0.554,0.691],[0.499,0.778],[0.424,0.854],[0.333,0.916],[0.23,0.962],[0.117,0.99],[0,1]]]}, "E":{w:0.56,s:[[[0.56,0],[0,0],[0,1],[0.56,1]],[[0,0.52],[0.44,0.52]]]}, "F":{w:0.55,s:[[[0.55,0],[0,0],[0,1]],[[0,0.52],[0.42,0.52]]]}, "G":{w:0.68,s:[[[0.555,0.067],[0.454,0.013],[0.346,0.001],[0.24,0.032],[0.145,0.103],[0.069,0.209],[0.02,0.339],[0,0.484],[0.013,0.629],[0.056,0.764],[0.126,0.876],[0.217,0.955],[0.322,0.996],[0.43,0.993],[0.534,0.948],[0.623,0.865],[0.69,0.75]],[[0.69,0.75],[0.69,0.53],[0.45,0.53]]]}, "H":{w:0.64,s:[[[0,0],[0,1]],[[0.64,0],[0.64,1]],[[0,0.52],[0.64,0.52]]]}, "I":{w:0.2,s:[[[0.1,0],[0.1,1]],[[0,0],[0.2,0]],[[0,1],[0.2,1]]]}, "J":{w:0.5,s:[[[0.44,0],[0.44,0.74]],[[0.44,0.74],[0.436,0.791],[0.423,0.839],[0.403,0.884],[0.376,0.924],[0.342,0.956],[0.304,0.98],[0.263,0.995],[0.22,1],[0.177,0.995],[0.136,0.98],[0.098,0.956],[0.064,0.924],[0.037,0.884],[0.017,0.839],[0.004,0.791],[0,0.74]]]}, "K":{w:0.62,s:[[[0,0],[0,1]],[[0.6,0],[0,0.56]],[[0.18,0.42],[0.6,1]]]}, "L":{w:0.54,s:[[[0,0],[0,1],[0.54,1]]]}, "M":{w:0.82,s:[[[0,1],[0,0],[0.41,0.7],[0.82,0],[0.82,1]]]}, "N":{w:0.7,s:[[[0,1],[0,0],[0.7,1],[0.7,0]]]}, "O":{w:0.74,s:[[[0.37,0],[0.512,0.038],[0.632,0.146],[0.712,0.309],[0.74,0.5],[0.712,0.691],[0.632,0.854],[0.512,0.962],[0.37,1],[0.228,0.962],[0.108,0.854],[0.028,0.691],[0,0.5],[0.028,0.309],[0.108,0.146],[0.228,0.038],[0.37,0]]]}, "P":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]]]}, "Q":{w:0.76,s:[[[0.38,0],[0.525,0.038],[0.649,0.146],[0.731,0.309],[0.76,0.5],[0.731,0.691],[0.649,0.854],[0.525,0.962],[0.38,1],[0.235,0.962],[0.111,0.854],[0.029,0.691],[0,0.5],[0.029,0.309],[0.111,0.146],[0.235,0.038],[0.38,0]],[[0.48,0.7],[0.8,1.06]]]}, "R":{w:0.62,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]],[[0.3,0.52],[0.62,1]]]}, "S":{w:0.58,s:[[[0.44,0.036],[0.39,0.014],[0.337,0.002],[0.282,0.001],[0.228,0.009],[0.176,0.028],[0.13,0.056],[0.089,0.092],[0.058,0.135],[0.035,0.183],[0.022,0.235],[0.021,0.288],[0.03,0.34],[0.049,0.389],[0.078,0.434],[0.115,0.473],[0.43,0.478],[0.485,0.516],[0.529,0.564],[0.561,0.621],[0.577,0.683],[0.579,0.747],[0.564,0.81],[0.535,0.868],[0.492,0.918],[0.438,0.958],[0.376,0.985],[0.309,0.999],[0.241,0.998],[0.174,0.982],[0.113,0.953],[0.061,0.911],[0.02,0.86]]]}, "T":{w:0.6,s:[[[0,0],[0.6,0]],[[0.3,0],[0.3,1]]]}, "U":{w:0.66,s:[[[0,0],[0,0.72],[0,0.72],[0.006,0.775],[0.025,0.827],[0.056,0.876],[0.097,0.918],[0.147,0.953],[0.204,0.979],[0.266,0.995],[0.33,1],[0.394,0.995],[0.456,0.979],[0.513,0.953],[0.563,0.918],[0.604,0.876],[0.635,0.827],[0.654,0.775],[0.66,0.72],[0.66,0.72],[0.66,0]]]}, "V":{w:0.66,s:[[[0,0],[0.33,1],[0.66,0]]]}, "W":{w:0.94,s:[[[0,0],[0.235,1],[0.47,0.28],[0.705,1],[0.94,0]]]}, "X":{w:0.64,s:[[[0,0],[0.64,1]],[[0.64,0],[0,1]]]}, "Y":{w:0.64,s:[[[0,0],[0.32,0.54],[0.64,0]],[[0.32,0.54],[0.32,1]]]}, "Z":{w:0.6,s:[[[0,0],[0.6,0],[0,1],[0.6,1]]]}};
@@ -754,7 +757,7 @@ const PHASES = [ // seconds
   {key:'marker',  dur:18,  label:'Markers, one pen at a time'},
   {key:'sign',    dur:3.0, label:''}
 ];
-const TOTAL = PHASES.reduce((a,p)=>a+p.dur,0);
+let resumeDrawing=null;
 
 async function choose(name){
   current=name; renderList(qEl.value);
@@ -765,162 +768,37 @@ async function choose(name){
 }
 
 async function draw(name, src){
-  const myJob=++job; cancelAnimationFrame(raf);
-  actionsEl.hidden=true; knot.style.opacity=0; setStitch(0);
-  promptEl.classList.add('hide'); stageEl.textContent='';
+  const myJob=++job; cancelAnimationFrame(raf); resumeDrawing=null;
+  actionsEl.hidden=true; document.getElementById('save').hidden=false;
+  document.getElementById('again').textContent='Draw it again';
+  knot.style.opacity=0; setStitch(0);
+  promptEl.classList.add('hide'); stageEl.textContent=`Preparing ${name}…`;
   setSize();
-  await document.fonts.ready.catch(()=>{});
-  const img = await loadImage(src);
-  if (myJob!==job) return;
-  const layers = buildLayers(img);
-  const px = layers.base.getContext('2d').getImageData(0,0,W,H).data;
-  const masks = makeMasks(px);
-
-  /* the wrong doodle, on the margin next to the drawing */
-  const g = GAG[name] || (ART[name]?null:GAG[DEMO]);
-  const gag=offscreen(W,H); const gc=gag.getContext('2d'); gc.lineCap='round'; gc.lineJoin='round';
-  let doodle=null;
-  if(g&&DOODLES[g.wrong]){ const {ox,oy,iw,ih}=layers.fit; const size=(g.size||GAG_SIZE)*iw, pad=size/2+6; const cx=Math.min(W-pad,Math.max(pad,ox+g.x*iw)), cy=Math.min(H-pad,Math.max(pad,oy+g.y*ih));
-    const wob=(i)=>Math.sin(i*12.9898)*0.012;
-    const polys=DOODLES[g.wrong].map((pl,k)=>pl.map(([x,y],i)=>[cx-size/2+(x+wob(i+k*7))*size, cy-size/2+(y+wob(i*3+k))*size]));
-    const segs=[]; let total=0; polys.forEach(pl=>{ for(let i=1;i<pl.length;i++){ const L=Math.hypot(pl[i][0]-pl[i-1][0],pl[i][1]-pl[i-1][1]); segs.push({a:pl[i-1],b:pl[i],L,from:total}); total+=L; } });
-    doodle={segs,total,cx,cy,size};
-  }
-  let drawnTo=0; const crumbs=[];
-  function drawDoodleTo(len){
-    gc.strokeStyle='rgb(96,94,90)'; gc.lineWidth=Math.max(1.4,1.8*S); gc.globalAlpha=0.9;   // identical pen to the traced sketch beside it
-    for(const s of doodle.segs){ if(s.from+s.L<=drawnTo||s.from>=len) continue;
-      const t0=Math.max(0,(drawnTo-s.from)/s.L), t1=Math.min(1,(len-s.from)/s.L);
-      gc.beginPath(); gc.moveTo(s.a[0]+(s.b[0]-s.a[0])*t0, s.a[1]+(s.b[1]-s.a[1])*t0); gc.lineTo(s.a[0]+(s.b[0]-s.a[0])*t1, s.a[1]+(s.b[1]-s.a[1])*t1); gc.stroke();
-      cursor.x=s.a[0]+(s.b[0]-s.a[0])*t1; cursor.y=s.a[1]+(s.b[1]-s.a[1])*t1; cursor.tx=cursor.x; cursor.ty=cursor.y; }
-    drawnTo=len;
-  }
-  function erase(q){
-    const d=doodle; const sweeps=4; const k=q*sweeps; const row=Math.min(sweeps-1,Math.floor(k)); const u=k-row; const dir=row%2?1-u:u;
-    const x=d.cx-d.size*0.6+dir*d.size*1.2, y=d.cy-d.size*0.5+(row+0.5)/sweeps*d.size;
-    gc.globalCompositeOperation='destination-out'; gc.globalAlpha=1; gc.lineWidth=d.size/sweeps*1.15; gc.lineCap='round';
-    gc.beginPath(); gc.moveTo(cursor.x,cursor.y); gc.lineTo(x,y); gc.stroke(); gc.globalCompositeOperation='source-over';
-    cursor.x=x; cursor.y=y; cursor.tx=x; cursor.ty=y;
-    if(Math.random()<0.7) crumbs.push({x:x+(Math.random()-0.5)*d.size*0.4, y:y+(Math.random()-0.5)*d.size*0.15, vy:0.4*S+Math.random()*S, r:(0.8+Math.random()*1.4)*S, a:0.8});
-  }
-  function drawCrumbs(){ for(const c of crumbs){ c.y+=c.vy; c.vy+=0.12*S; c.a-=0.018; if(c.a<=0) continue; ctx.globalAlpha=c.a; ctx.fillStyle='#8a8580'; ctx.beginPath(); ctx.ellipse(c.x,c.y,c.r*1.6,c.r,0.6,0,Math.PI*2); ctx.fill(); } ctx.globalAlpha=1; while(crumbs.length&&crumbs[0].a<=0) crumbs.shift(); }
-
-  if (reduced){ ctx.drawImage(layers.base,0,0); sign(1); finish(); return; }
-
-  const layer=offscreen(W,H); const lc=layer.getContext('2d');          // the layer currently being masked in
-  const maskC=offscreen(masks.mw,masks.mh); const mc=maskC.getContext('2d');
-  const mid=mc.createImageData(masks.mw,masks.mh);
-  const inkMask=offscreen(W,H); const im=inkMask.getContext('2d'); im.lineCap='round'; im.strokeStyle='#fff';  // where marker has touched
-  const colour=offscreen(W,H); const cc=colour.getContext('2d');       // the artwork, revealed through inkMask
-  const angleField=noiseField(masks.mw,masks.mh,7,2024);
   const S=W/1000;
-  let sketchDrawn=0;
-  function drawSketchTo(len){
-    len=Math.max(sketchDrawn,len);
-    lc.strokeStyle='rgb(96,94,90)'; lc.lineWidth=Math.max(1.4,1.8*S); lc.lineCap='round'; lc.lineJoin='round'; lc.globalAlpha=0.9;
-    const segs=layers.sketchSegs||[];
-    for(let k=0;k<segs.length;k++){ const sg=segs[k]; if(sg.from+sg.L<=sketchDrawn||sg.from>=len)continue;
-      const t0=Math.max(0,(sketchDrawn-sg.from)/sg.L), t1=Math.min(1,(len-sg.from)/sg.L);
-      lc.beginPath(); lc.moveTo(sg.a[0]+(sg.b[0]-sg.a[0])*t0, sg.a[1]+(sg.b[1]-sg.a[1])*t0); lc.lineTo(sg.a[0]+(sg.b[0]-sg.a[0])*t1, sg.a[1]+(sg.b[1]-sg.a[1])*t1); lc.stroke();
-      cursor.x=sg.a[0]+(sg.b[0]-sg.a[0])*t1; cursor.y=sg.a[1]+(sg.b[1]-sg.a[1])*t1; cursor.tx=cursor.x; cursor.ty=cursor.y; }
-    lc.globalAlpha=1; sketchDrawn=len;
+  let layers;
+  try {
+    const img=await loadImage(src);
+    if(myJob!==job)return;
+    // Let the loading label paint before tracing cached images, too.
+    await new Promise(resolve=>setTimeout(resolve,0));
+    if(myJob!==job)return;
+    layers=buildLayers(img,!reduced);
+  } catch(error) {
+    if(myJob!==job)return;
+    ctx.clearRect(0,0,W,H);
+    promptEl.querySelector('span').textContent=`Couldn't load ${name}. Please try again.`;
+    promptEl.classList.remove('hide'); stageEl.textContent='';
+    actionsEl.hidden=false; document.getElementById('save').hidden=true;
+    document.getElementById('again').textContent='Try again';
+    return;
   }
-
-  const cursor={x:W*0.05,y:H*0.5,tx:W*0.05,ty:H*0.5};
-  let tip='rgb(60,60,60)';
-  let start=performance.now(), phaseIdx=0, phaseStart=start;
-
-  function maskTo(field,t){
-    const D=mid.data; const soft=0.07;
-    for(let i=0;i<field.length;i++){ let a=(t*(1+soft)-field[i])/soft; a=a<0?0:a>1?1:a; D[i*4+3]=a*255|0; D[i*4]=D[i*4+1]=D[i*4+2]=0; }
-    mc.putImageData(mid,0,0);
-  }
-  function frontier(field,t){
-    let best=null,bd=1e12;
-    for(let k=0;k<160;k++){ const i=(Math.random()*field.length)|0; const d=field[i]-t;
-      if(d>-0.03&&d<0.015){ const x=(i%masks.mw)*2,y=(i/masks.mw|0)*2; const dd=(x-cursor.x)**2+(y-cursor.y)**2+Math.random()*40000;
-        if(dd<bd){bd=dd;best={x,y};} } }
-    if(best){cursor.tx=best.x;cursor.ty=best.y;}
-    cursor.x+=(cursor.tx-cursor.x)*0.28; cursor.y+=(cursor.ty-cursor.y)*0.28;
-  }
-  const lumAt=(x,y)=>{ if(x<0||y<0||x>=W||y>=H) return 255; const i=((y|0)*W+(x|0))*4; return 0.299*px[i]+0.587*px[i+1]+0.114*px[i+2]; };
-
-  /* one marker stroke: a broad flat swipe that reveals the artwork underneath it.
-     First pass leaves the ink slightly translucent; overlapping passes bring it to full — like layering marker. */
-  function markerStroke(x,y,late){
-    if(x<0||y<0||x>=W-1||y>=H-1) return false;
-    const lum=lumAt(x,y); if(lum>244) return false;
-    const mi=((y/2)|0)*masks.mw+((x/2)|0);
-    const base=-0.55+(angleField[mi]-0.5)*1.4;
-    const ang=Math.random()<0.3 ? base+1.5 : base;
-    const len=(16+Math.random()*30)*S*(late?1.5:1);
-    const dx=Math.cos(ang)*len/2, dy=Math.sin(ang)*len/2;
-    if(!late && (lumAt(x-dx,y-dy)>246||lumAt(x+dx,y+dy)>246)) return false;
-    im.globalAlpha = late ? 1 : 0.62+Math.random()*0.25;
-    im.lineWidth=(7+Math.random()*7)*S;
-    const bow=(Math.random()-0.5)*len*0.1;
-    im.beginPath(); im.moveTo(x-dx,y-dy); im.quadraticCurveTo(x+bow*Math.sin(ang),y-bow*Math.cos(ang),x+dx,y+dy); im.stroke();
-    const i=((y|0)*W+(x|0))*4; tip=`rgb(${px[i]},${px[i+1]},${px[i+2]})`;
-    return true;
-  }
-  function swipe(field,t,budget){
-    const late=t>0.9; let laid=0,tries=0,anchor=null;
-    while(laid<budget && tries<budget*5){
-      tries++;
-      const i=(Math.random()*field.length)|0; const d=field[i]-t;
-      if(late){ if(d>0.02) continue; } else if(d<-0.07||d>0.005) continue;
-      const x=(i%masks.mw)*2+Math.random()*2, y=(i/masks.mw|0)*2+Math.random()*2;
-      if(markerStroke(x,y,late)){ laid++; if(!anchor||Math.random()<0.12) anchor={x,y}; }
-    }
-    im.globalAlpha=1;
-    if(anchor){ cursor.tx=anchor.x; cursor.ty=anchor.y; }
-    cursor.x+=(cursor.tx-cursor.x)*0.22; cursor.y+=(cursor.ty-cursor.y)*0.22;
-  }
-  function drawTool(kind){
-    const s=S; ctx.save(); ctx.translate(cursor.x,cursor.y);
-    if(kind==='marker'){
-      ctx.rotate(-0.95);
-      ctx.fillStyle=tip; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(9*s,-5*s); ctx.lineTo(9*s,5*s); ctx.closePath(); ctx.fill();   // chisel tip
-      ctx.fillStyle='#EDEDEA'; ctx.fillRect(9*s,-6*s,14*s,12*s);                                                                       // collar
-      ctx.fillStyle=tip; ctx.fillRect(23*s,-7*s,70*s,14*s);                                                                             // barrel in ink colour
-      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(23*s,-7*s,70*s,3*s);
-      ctx.fillStyle='#2b2a27'; ctx.fillRect(93*s,-7*s,3*s,14*s);
-    } else if(kind==='eraser'){
-      ctx.rotate(-0.5);
-      ctx.fillStyle='#E9A0A8'; ctx.beginPath(); ctx.roundRect(-14*s,-9*s,54*s,18*s,4*s); ctx.fill();
-      ctx.fillStyle='#F6F1E7'; ctx.fillRect(22*s,-9*s,18*s,18*s);
-      ctx.strokeStyle='#3a3835'; ctx.lineWidth=1.2*s; ctx.beginPath(); ctx.roundRect(-14*s,-9*s,54*s,18*s,4*s); ctx.stroke();
-    } else if(kind==='sketch'){
-      ctx.rotate(-0.75);
-      ctx.fillStyle='#4a4844'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(9*s,-3*s); ctx.lineTo(9*s,3*s); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#EAD9B8'; ctx.beginPath(); ctx.moveTo(9*s,-3.5*s); ctx.lineTo(18*s,-4.5*s); ctx.lineTo(18*s,4.5*s); ctx.lineTo(9*s,3.5*s); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#C9A54A'; ctx.fillRect(18*s,-4.5*s,66*s,9*s);
-      ctx.fillStyle='#D2342A'; ctx.fillRect(84*s,-4.5*s,8*s,9*s);
-    } else {
-      ctx.rotate(-0.75);
-      ctx.fillStyle='#262522'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(7*s,-2*s); ctx.lineTo(7*s,2*s); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#D8D8D4'; ctx.fillRect(7*s,-3*s,10*s,6*s);
-      ctx.fillStyle='#2b2a27'; ctx.fillRect(17*s,-4*s,72*s,8*s);
-      ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fillRect(17*s,-4*s,72*s,2*s);
-    }
-    ctx.restore();
-  }
-  function compose(){
-    ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
-    if(phaseIdx===0){ ctx.drawImage(layer,0,0); return; }
-    ctx.drawImage(layers.sketch,0,0);            // rough sketch stays underneath
-    if(phaseIdx===1){ ctx.drawImage(gag,0,0); drawCrumbs(); return; }
-    if(phaseIdx===2){ ctx.drawImage(layer,0,0); return; }
-    ctx.drawImage(layers.line,0,0);              // fineliner underneath…
-    cc.clearRect(0,0,W,H); cc.drawImage(layers.base,0,0);
-    cc.globalCompositeOperation='destination-in'; cc.drawImage(inkMask,0,0); cc.globalCompositeOperation='source-over';
-    ctx.drawImage(colour,0,0);                   // …marker colour on top, opaque where it has been laid
-  }
-
+  cv.setAttribute('aria-label',`Illustration of ${name}`);
+  const cursor={x:W*0.05,y:H*0.5,lift:false,ink:'#373530'};
+  let tip='#373530';
   /* hand-letter the suburb name along the bottom — the pencil TRACES each capital stroke by stroke
      (single-line hand alphabet GLYPHS), nib following the tip; auto-scaled so nothing clips. */
   function sign(progress){
-    const text=(current||DEMO).toUpperCase();
+    const text=name.toUpperCase();
     const capH=H*0.082, tracking=0.30, spacew=0.55;                 // em units (of cap height)
     let adv=0; const items=[];
     for(const ch of text){
@@ -957,44 +835,139 @@ async function draw(name, src){
     return (progress<1 && tip) ? {x:tip[0], y:tip[1]} : null;       // nib rides the writing frontier
   }
 
-  function frame(now){
-    if(myJob!==job) return;
-    const elapsed=(now-start)/1000;
-    setStitch(Math.min(1,elapsed/TOTAL));
-    let ph=PHASES[phaseIdx]; let t=(now-phaseStart)/1000/ph.dur;
-    if(t>=1){
-      if(ph.key==='marker'){ im.globalAlpha=1; im.fillStyle='#fff'; im.fillRect(0,0,W,H); }   // every last sliver is inked
-      phaseIdx++; phaseStart=now;
-      if(phaseIdx>=PHASES.length){ ctx.drawImage(layers.base,0,0); sign(1); finish(); return; }
-      ph=PHASES[phaseIdx]; t=0;
+  if(reduced){ctx.drawImage(layers.base,0,0);sign(1);finish();return;}
+  /* the wrong doodle, on the margin next to the drawing */
+  const g = GAG[name] || (ART[name]?null:GAG[DEMO]);
+  const gag=offscreen(W,H); const gc=gag.getContext('2d'); gc.lineCap='round'; gc.lineJoin='round';
+  let doodle=null;
+  if(g&&DOODLES[g.wrong]){ const {ox,oy,iw,ih}=layers.fit; const size=(g.size||GAG_SIZE)*iw, pad=size/2+6; const cx=Math.min(W-pad,Math.max(pad,ox+g.x*iw)), cy=Math.min(H-pad,Math.max(pad,oy+g.y*ih));
+    const wob=(i)=>Math.sin(i*12.9898)*0.012;
+    const polys=DOODLES[g.wrong].map((pl,k)=>pl.map(([x,y],i)=>[cx-size/2+(x+wob(i+k*7))*size, cy-size/2+(y+wob(i*3+k))*size]));
+    const segs=[]; let total=0; polys.forEach(pl=>{ for(let i=1;i<pl.length;i++){ const L=Math.hypot(pl[i][0]-pl[i-1][0],pl[i][1]-pl[i-1][1]); segs.push({a:pl[i-1],b:pl[i],L,from:total}); total+=L; } });
+    doodle={segs,total,cx,cy,size};
+  }
+  let drawnTo=0; const crumbs=[];
+  function drawDoodleTo(len){
+    gc.strokeStyle='rgb(96,94,90)'; gc.lineWidth=Math.max(1.4,1.8*S); gc.globalAlpha=0.9;   // identical pen to the traced sketch beside it
+    for(const s of doodle.segs){ if(s.from+s.L<=drawnTo||s.from>=len) continue;
+      const t0=Math.max(0,(drawnTo-s.from)/s.L), t1=Math.min(1,(len-s.from)/s.L);
+      gc.beginPath(); gc.moveTo(s.a[0]+(s.b[0]-s.a[0])*t0, s.a[1]+(s.b[1]-s.a[1])*t0); gc.lineTo(s.a[0]+(s.b[0]-s.a[0])*t1, s.a[1]+(s.b[1]-s.a[1])*t1); gc.stroke();
+      cursor.x=s.a[0]+(s.b[0]-s.a[0])*t1; cursor.y=s.a[1]+(s.b[1]-s.a[1])*t1; cursor.lift=false; }
+    drawnTo=len;
+  }
+  function erase(q){
+    const d=doodle; const sweeps=4; const k=q*sweeps; const row=Math.min(sweeps-1,Math.floor(k)); const u=k-row; const dir=row%2?1-u:u;
+    const x=d.cx-d.size*0.6+dir*d.size*1.2, y=d.cy-d.size*0.5+(row+0.5)/sweeps*d.size;
+    gc.globalCompositeOperation='destination-out'; gc.globalAlpha=1; gc.lineWidth=d.size/sweeps*1.15; gc.lineCap='round';
+    gc.beginPath(); gc.moveTo(cursor.x,cursor.y); gc.lineTo(x,y); gc.stroke(); gc.globalCompositeOperation='source-over';
+    cursor.x=x; cursor.y=y; cursor.lift=false;
+    if(Math.random()<0.7) crumbs.push({x:x+(Math.random()-0.5)*d.size*0.4, y:y+(Math.random()-0.5)*d.size*0.15, vy:0.4*S+Math.random()*S, r:(0.8+Math.random()*1.4)*S, a:0.8});
+  }
+  function drawCrumbs(){ for(const c of crumbs){ c.y+=c.vy; c.vy+=0.12*S; c.a-=0.018; if(c.a<=0) continue; ctx.globalAlpha=c.a; ctx.fillStyle='#8a8580'; ctx.beginPath(); ctx.ellipse(c.x,c.y,c.r*1.6,c.r,0.6,0,Math.PI*2); ctx.fill(); } ctx.globalAlpha=1; while(crumbs.length&&crumbs[0].a<=0) crumbs.shift(); }
+
+  const pencil=offscreen(W,H), pc=pencil.getContext('2d');
+  const line=offscreen(W,H), lc=line.getContext('2d');
+  const inkMask=offscreen(W,H), im=inkMask.getContext('2d');
+  const colour=offscreen(W,H), cc=colour.getContext('2d');
+  const pencilState=strokeState(layers.pencil), lineState=strokeState(layers.fineliner), markerState=strokeState(layers.marker);
+  const phases=PHASES.filter(phase=>phase.key!=='gag'||doodle);
+  const total=phases.reduce((sum,phase)=>sum+phase.dur,0);
+  let phaseIdx=0, phaseElapsed=0, elapsed=0, lastFrame=null, lastLabel='';
+  let lineProgress=0, settle=0;
+  const pace=t=>0.6*t+0.4*t*t*(3-2*t);
+  function drawTool(kind){
+    const s=S; ctx.save(); ctx.translate(cursor.x,cursor.y);
+    if(cursor.lift){ ctx.globalAlpha=0.65; ctx.translate(0,-4*S); }
+    if(kind==='marker'){
+      ctx.rotate(-0.95);
+      ctx.fillStyle=tip; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(9*s,-5*s); ctx.lineTo(9*s,5*s); ctx.closePath(); ctx.fill();   // chisel tip
+      ctx.fillStyle='#EDEDEA'; ctx.fillRect(9*s,-6*s,14*s,12*s);                                                                       // collar
+      ctx.fillStyle=tip; ctx.fillRect(23*s,-7*s,70*s,14*s);                                                                             // barrel in ink colour
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.fillRect(23*s,-7*s,70*s,3*s);
+      ctx.fillStyle='#2b2a27'; ctx.fillRect(93*s,-7*s,3*s,14*s);
+    } else if(kind==='eraser'){
+      ctx.rotate(-0.5);
+      ctx.fillStyle='#E9A0A8'; ctx.beginPath(); ctx.roundRect(-14*s,-9*s,54*s,18*s,4*s); ctx.fill();
+      ctx.fillStyle='#F6F1E7'; ctx.fillRect(22*s,-9*s,18*s,18*s);
+      ctx.strokeStyle='#3a3835'; ctx.lineWidth=1.2*s; ctx.beginPath(); ctx.roundRect(-14*s,-9*s,54*s,18*s,4*s); ctx.stroke();
+    } else if(kind==='sketch'){
+      ctx.rotate(-0.75);
+      ctx.fillStyle='#4a4844'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(9*s,-3*s); ctx.lineTo(9*s,3*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#EAD9B8'; ctx.beginPath(); ctx.moveTo(9*s,-3.5*s); ctx.lineTo(18*s,-4.5*s); ctx.lineTo(18*s,4.5*s); ctx.lineTo(9*s,3.5*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#C9A54A'; ctx.fillRect(18*s,-4.5*s,66*s,9*s);
+      ctx.fillStyle='#D2342A'; ctx.fillRect(84*s,-4.5*s,8*s,9*s);
+    } else {
+      ctx.rotate(-0.75);
+      ctx.fillStyle='#262522'; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(7*s,-2*s); ctx.lineTo(7*s,2*s); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#D8D8D4'; ctx.fillRect(7*s,-3*s,10*s,6*s);
+      ctx.fillStyle='#2b2a27'; ctx.fillRect(17*s,-4*s,72*s,8*s);
+      ctx.fillStyle='rgba(255,255,255,0.22)'; ctx.fillRect(17*s,-4*s,72*s,2*s);
     }
-    if(ph.key==='gag' && !doodle){ phaseIdx++; phaseStart=now; ph=PHASES[phaseIdx]; t=0; }
-    const e=t*t*(3-2*t)*0.85+t*0.15;
-    if(ph.key==='sketch'){
-      drawSketchTo(e*(layers.sketchTotal||0));
-      compose(); drawTool('sketch');
-    } else if(ph.key==='line'){
-      maskTo(masks.line,e);
-      lc.clearRect(0,0,W,H); lc.drawImage(layers.line,0,0);
-      lc.globalCompositeOperation='destination-in'; lc.drawImage(maskC,0,0,W,H); lc.globalCompositeOperation='source-over';
-      compose(); frontier(masks.line,e); drawTool('line');
-    } else if(ph.key==='marker'){
-      swipe(masks.colour,e,120); compose(); drawTool('marker');
-    } else if(ph.key==='gag'){
-      // 0–.55 draw the wrong thing · .55–.66 look at it · .66–1 rub it out
-      if(t<0.55){ const q=t/0.55; drawDoodleTo(doodle.total*(q*q*(3-2*q))); compose(); drawTool('sketch'); }
-      else if(t<0.66){ compose(); cursor.x+=(doodle.cx+doodle.size*0.7-cursor.x)*0.08; cursor.y+=(doodle.cy+doodle.size*0.6-cursor.y)*0.08; drawTool('sketch'); }
-      else { erase((t-0.66)/0.34); compose(); drawTool('eraser'); }
-    } else if(ph.key==='sign'){
+    ctx.restore();
+  }
+
+  function compose(){
+    ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
+    const key=phases[phaseIdx].key;
+    ctx.save();
+    ctx.globalAlpha=key==='line'?1-lineProgress*0.8:key==='marker'?0.2:1;
+    ctx.drawImage(pencil,0,0); ctx.restore();
+    if(key==='gag'){ctx.drawImage(gag,0,0);drawCrumbs();return;}
+    if(key==='line'||key==='marker')ctx.drawImage(line,0,0);
+    if(key==='marker'){
+      cc.clearRect(0,0,W,H); cc.drawImage(layers.base,0,0);
+      cc.globalCompositeOperation='destination-in'; cc.drawImage(inkMask,0,0);
+      cc.globalCompositeOperation='source-over'; ctx.drawImage(colour,0,0);
+      // Only the last fine slivers and remaining pencil disappear in this
+      // short settling pass; the source artwork is exact before signing.
+      if(settle>0){ctx.save();ctx.globalAlpha=settle;ctx.drawImage(layers.base,0,0);ctx.restore();}
+    }
+  }
+  function completePhase(key){
+    if(key==='sketch')paintStrokes(pencilState,pc,1,cursor);
+    if(key==='line'){paintStrokes(lineState,lc,1,cursor);lineProgress=1;}
+    if(key==='marker'){paintStrokes(markerState,im,1,cursor);settle=1;}
+    if(key==='gag'){gc.clearRect(0,0,W,H);crumbs.length=0;}
+  }
+  function frame(now){
+    if(myJob!==job||document.hidden)return;
+    const delta=lastFrame===null?0:Math.max(0,(now-lastFrame)/1000);
+    lastFrame=now; elapsed+=delta; phaseElapsed+=delta;
+    // Carry elapsed time across phases and finish each route even after a
+    // dropped frame. A 30 Hz display lays the same marks as a 120 Hz display.
+    while(phaseIdx<phases.length && phaseElapsed>=phases[phaseIdx].dur){
+      completePhase(phases[phaseIdx].key);
+      phaseElapsed-=phases[phaseIdx].dur; phaseIdx++;
+    }
+    if(phaseIdx>=phases.length){
+      ctx.drawImage(layers.base,0,0); sign(1); resumeDrawing=null; finish(); return;
+    }
+    const phase=phases[phaseIdx], t=Math.min(1,phaseElapsed/phase.dur);
+    if(lastLabel!==phase.key){stageEl.textContent=phase.label;lastLabel=phase.key;}
+    setStitch(Math.min(1,elapsed/total));
+    if(phase.key==='sketch'){
+      paintStrokes(pencilState,pc,pace(t),cursor); compose(); drawTool('sketch');
+    } else if(phase.key==='line'){
+      lineProgress=pace(t);paintStrokes(lineState,lc,lineProgress,cursor);compose();drawTool('line');
+    } else if(phase.key==='marker'){
+      paintStrokes(markerState,im,Math.min(1,t/0.94),cursor);
+      settle=Math.max(0,(t-0.92)/0.08);settle=settle*settle*(3-2*settle);
+      tip=cursor.ink;compose();if(t<0.94)drawTool('marker');
+    } else if(phase.key==='gag'){
+      cursor.lift=false;
+      if(t<0.55){const q=t/0.55;drawDoodleTo(doodle.total*(q*q*(3-2*q)));compose();drawTool('sketch');}
+      else if(t<0.66){compose();cursor.lift=true;drawTool('sketch');}
+      else{erase((t-0.66)/0.34);compose();drawTool('eraser');}
+    } else if(phase.key==='sign'){
       ctx.drawImage(layers.base,0,0);
       const pen=sign(t);
-      if(pen){ cursor.x=pen.x; cursor.y=pen.y; drawTool('pen'); }
+      if(pen){cursor.x=pen.x;cursor.y=pen.y;cursor.lift=false;drawTool('pen');}
     }
     raf=requestAnimationFrame(frame);
   }
-  raf=requestAnimationFrame(t=>{start=t;phaseStart=t;frame(t);});
+  resumeDrawing=()=>{if(myJob!==job)return;lastFrame=null;cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);};
+  if(!document.hidden)resumeDrawing();
 }
-
 function finish(){ stageEl.textContent=''; actionsEl.hidden=false; knot.style.opacity=1; setStitch(1); }
 
 function setStitch(p){ const x=Math.round(p*1000); stitch.setAttribute('d',`M0 7 L${x} 7`); knot.setAttribute('cx',x); }
@@ -1003,7 +976,10 @@ document.getElementById('again').addEventListener('click',()=>{ if(current) choo
 document.getElementById('save').addEventListener('click',()=>{
   const a=document.createElement('a'); a.download=`${current.replace(/\s+/g,'-').toLowerCase()}-drawn.png`; a.href=cv.toDataURL('image/png'); a.click();
 });
-addEventListener('resize',()=>{ if(current && actionsEl.hidden===false){ cancelAnimationFrame(raf); const url=cv.toDataURL(); setSize(); loadImage(url).then(i=>ctx.drawImage(i,0,0,W,H)); } });
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)cancelAnimationFrame(raf);
+  else if(resumeDrawing)resumeDrawing();
+});
 
 /* open with art, not a blank sheet: auto-draw one suburb on load */
 choose(DEMO);
