@@ -606,6 +606,13 @@ class DrawingSound {
       this.silence(true);return;
     }
     if(!kind||!cursor||delta<=0||!this.levels[kind]){this.silence();return;}
+    if(kind==='pen'){
+      // Lettering has deliberate, timed lifts. Follow each complete pen stroke
+      // with a short soft envelope, while the same recording keeps running.
+      const level=cursor.lift?0:this.levels.pen*(cursor.strokeGain??1);
+      this.setLevel(level,this.context.currentTime,cursor.lift?0.010:0.018,!cursor.lift);
+      return;
+    }
     // Many visual contours last just a frame. Let adjacent contacts form one
     // audible gesture. A lift >120 ms fades naturally through the watchdog.
     if(cursor.lift)return;
@@ -822,12 +829,80 @@ function buildLayers(img,animate=true){
 
 const GLYPHS = {"A":{w:0.7,s:[[[0,1],[0.35,0],[0.7,1]],[[0.13,0.62],[0.57,0.62]]]}, "B":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.082,0.005],[0.161,0.019],[0.233,0.042],[0.297,0.073],[0.349,0.111],[0.388,0.154],[0.412,0.201],[0.42,0.25],[0.412,0.299],[0.388,0.346],[0.349,0.389],[0.297,0.427],[0.233,0.458],[0.161,0.481],[0.082,0.495],[0,0.5]],[[0,0.48],[0.094,0.485],[0.184,0.5],[0.267,0.524],[0.339,0.556],[0.399,0.596],[0.443,0.641],[0.471,0.689],[0.48,0.74],[0.471,0.791],[0.443,0.839],[0.399,0.884],[0.339,0.924],[0.267,0.956],[0.184,0.98],[0.094,0.995],[0,1]]]}, "C":{w:0.64,s:[[[0.566,0.09],[0.479,0.028],[0.384,0.001],[0.286,0.011],[0.194,0.056],[0.114,0.135],[0.052,0.241],[0.013,0.365],[0,0.5],[0.013,0.635],[0.052,0.759],[0.114,0.865],[0.194,0.944],[0.286,0.989],[0.384,0.999],[0.479,0.972],[0.566,0.91]]]}, "D":{w:0.64,s:[[[0,0],[0,1]],[[0,0],[0.117,0.01],[0.23,0.038],[0.333,0.084],[0.424,0.146],[0.499,0.222],[0.554,0.309],[0.588,0.402],[0.6,0.5],[0.588,0.598],[0.554,0.691],[0.499,0.778],[0.424,0.854],[0.333,0.916],[0.23,0.962],[0.117,0.99],[0,1]]]}, "E":{w:0.56,s:[[[0.56,0],[0,0],[0,1],[0.56,1]],[[0,0.52],[0.44,0.52]]]}, "F":{w:0.55,s:[[[0.55,0],[0,0],[0,1]],[[0,0.52],[0.42,0.52]]]}, "G":{w:0.68,s:[[[0.555,0.067],[0.454,0.013],[0.346,0.001],[0.24,0.032],[0.145,0.103],[0.069,0.209],[0.02,0.339],[0,0.484],[0.013,0.629],[0.056,0.764],[0.126,0.876],[0.217,0.955],[0.322,0.996],[0.43,0.993],[0.534,0.948],[0.623,0.865],[0.69,0.75]],[[0.69,0.75],[0.69,0.53],[0.45,0.53]]]}, "H":{w:0.64,s:[[[0,0],[0,1]],[[0.64,0],[0.64,1]],[[0,0.52],[0.64,0.52]]]}, "I":{w:0.2,s:[[[0.1,0],[0.1,1]],[[0,0],[0.2,0]],[[0,1],[0.2,1]]]}, "J":{w:0.5,s:[[[0.44,0],[0.44,0.74]],[[0.44,0.74],[0.436,0.791],[0.423,0.839],[0.403,0.884],[0.376,0.924],[0.342,0.956],[0.304,0.98],[0.263,0.995],[0.22,1],[0.177,0.995],[0.136,0.98],[0.098,0.956],[0.064,0.924],[0.037,0.884],[0.017,0.839],[0.004,0.791],[0,0.74]]]}, "K":{w:0.62,s:[[[0,0],[0,1]],[[0.6,0],[0,0.56]],[[0.18,0.42],[0.6,1]]]}, "L":{w:0.54,s:[[[0,0],[0,1],[0.54,1]]]}, "M":{w:0.82,s:[[[0,1],[0,0],[0.41,0.7],[0.82,0],[0.82,1]]]}, "N":{w:0.7,s:[[[0,1],[0,0],[0.7,1],[0.7,0]]]}, "O":{w:0.74,s:[[[0.37,0],[0.512,0.038],[0.632,0.146],[0.712,0.309],[0.74,0.5],[0.712,0.691],[0.632,0.854],[0.512,0.962],[0.37,1],[0.228,0.962],[0.108,0.854],[0.028,0.691],[0,0.5],[0.028,0.309],[0.108,0.146],[0.228,0.038],[0.37,0]]]}, "P":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]]]}, "Q":{w:0.76,s:[[[0.38,0],[0.525,0.038],[0.649,0.146],[0.731,0.309],[0.76,0.5],[0.731,0.691],[0.649,0.854],[0.525,0.962],[0.38,1],[0.235,0.962],[0.111,0.854],[0.029,0.691],[0,0.5],[0.029,0.309],[0.111,0.146],[0.235,0.038],[0.38,0]],[[0.48,0.7],[0.8,1.06]]]}, "R":{w:0.62,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]],[[0.3,0.52],[0.62,1]]]}, "S":{w:0.58,s:[[[0.44,0.036],[0.39,0.014],[0.337,0.002],[0.282,0.001],[0.228,0.009],[0.176,0.028],[0.13,0.056],[0.089,0.092],[0.058,0.135],[0.035,0.183],[0.022,0.235],[0.021,0.288],[0.03,0.34],[0.049,0.389],[0.078,0.434],[0.115,0.473],[0.43,0.478],[0.485,0.516],[0.529,0.564],[0.561,0.621],[0.577,0.683],[0.579,0.747],[0.564,0.81],[0.535,0.868],[0.492,0.918],[0.438,0.958],[0.376,0.985],[0.309,0.999],[0.241,0.998],[0.174,0.982],[0.113,0.953],[0.061,0.911],[0.02,0.86]]]}, "T":{w:0.6,s:[[[0,0],[0.6,0]],[[0.3,0],[0.3,1]]]}, "U":{w:0.66,s:[[[0,0],[0,0.72],[0,0.72],[0.006,0.775],[0.025,0.827],[0.056,0.876],[0.097,0.918],[0.147,0.953],[0.204,0.979],[0.266,0.995],[0.33,1],[0.394,0.995],[0.456,0.979],[0.513,0.953],[0.563,0.918],[0.604,0.876],[0.635,0.827],[0.654,0.775],[0.66,0.72],[0.66,0.72],[0.66,0]]]}, "V":{w:0.66,s:[[[0,0],[0.33,1],[0.66,0]]]}, "W":{w:0.94,s:[[[0,0],[0.235,1],[0.47,0.28],[0.705,1],[0.94,0]]]}, "X":{w:0.64,s:[[[0,0],[0.64,1]],[[0.64,0],[0,1]]]}, "Y":{w:0.64,s:[[[0,0],[0.32,0.54],[0.64,0]],[[0.32,0.54],[0.32,1]]]}, "Z":{w:0.6,s:[[[0,0],[0.6,0],[0,1],[0.6,1]]]}};
 
+function makeLetteringPlan(name,width,height){
+  const S=width/1000, capH=height*0.082, tracking=0.30, spacew=0.55;
+  let adv=0;const items=[];
+  for(const ch of name.toUpperCase()){
+    if(ch===' '){adv+=spacew;continue;}
+    const gl=GLYPHS[ch];if(!gl){adv+=0.55+tracking;continue;}
+    items.push({gl,x0:adv});adv+=gl.w+tracking;
+  }
+  let em=capH,totalW=(adv-tracking)*em;const maxW=width*0.9;
+  if(totalW>maxW){em*=maxW/totalW;totalW=(adv-tracking)*em;}
+  const startX=(width-totalW)/2,topY=height*0.955-em,jit=0.6*S;
+  const segments=[],strokes=[];let duration=0,previous=null,previousLetter=-1;
+  items.forEach((it,li)=>{
+    const bx=startX+it.x0*em,yj=Math.sin(li*1.7)*em*0.02;
+    for(const pl of it.gl.s){
+      const points=pl.map(([x,y],i)=>[
+        bx+x*em+Math.sin((li*7+i)*12.9898)*jit,
+        topY+y*em+yj+Math.sin((li*5+i)*7.13)*jit
+      ]);
+      const parts=[];let length=0;
+      for(let i=1;i<points.length;i++){
+        const L=Math.hypot(points[i][0]-points[i-1][0],points[i][1]-points[i-1][1]);
+        if(L>0){parts.push({a:points[i-1],b:points[i],L});length+=L;}
+      }
+      if(!length)continue;
+      if(previous){
+        const pause=previousLetter===li?0.14:0.24;
+        segments.push({a:previous,b:points[0],from:duration,dur:pause,lift:true});duration+=pause;
+      }
+      // Speed is measured in letter heights, so long suburb names retain the
+      // same unhurried pace even when the lettering scales down to fit.
+      const stroke={id:strokes.length,from:duration,dur:Math.max(0.26,length/em/2.4)};
+      strokes.push(stroke);
+      for(const part of parts){
+        const dur=stroke.dur*part.L/length;
+        segments.push({...part,from:duration,dur,lift:false,stroke});duration+=dur;
+      }
+      previous=points[points.length-1];previousLetter=li;
+    }
+  });
+  return {segments,strokes,duration:Math.max(0.01,duration)};
+}
+
+function paintLettering(context,plan,progress,S){
+  const time=Math.max(0,Math.min(1,progress))*plan.duration;
+  const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+  context.save();context.strokeStyle='#141414';context.lineWidth=Math.max(1.8,2.6*S);
+  context.lineCap='round';context.lineJoin='round';let tip=null;
+  for(const segment of plan.segments){
+    if(segment.from>time)break;
+    const u=Math.max(0,Math.min(1,(time-segment.from)/segment.dur));
+    const position=segment.lift?smooth(u):u;
+    const x=segment.a[0]+(segment.b[0]-segment.a[0])*position;
+    const y=segment.a[1]+(segment.b[1]-segment.a[1])*position;
+    if(!segment.lift&&u>0){
+      context.beginPath();context.moveTo(...segment.a);context.lineTo(x,y);context.stroke();
+    }
+    let strokeGain=0;
+    if(!segment.lift){
+      const elapsed=time-segment.stroke.from,remaining=segment.stroke.dur-elapsed;
+      strokeGain=Math.min(smooth(elapsed/0.035),smooth(remaining/0.05));
+    }
+    tip={x,y,lift:segment.lift,strokeGain};
+    if(time<segment.from+segment.dur)break;
+  }
+  context.restore();return progress<1?tip:null;
+}
+
 const PHASES = [ // seconds
   {key:'sketch',  dur:6},
   {key:'gag',     dur:6},
   {key:'line',    dur:8.5},
   {key:'marker',  dur:18},
-  {key:'sign',    dur:3.0}
+  {key:'sign'} // Duration follows the name's actual strokes and pen lifts.
 ];
 let resumeDrawing=null;
 
@@ -868,45 +943,8 @@ async function draw(name, src){
   cv.setAttribute('aria-label',`Illustration of ${name}`);
   const cursor={x:W*0.05,y:H*0.5,lift:false,ink:'#373530'};
   let tip='#373530';
-  /* hand-letter the suburb name along the bottom — the pencil TRACES each capital stroke by stroke
-     (single-line hand alphabet GLYPHS), nib following the tip; auto-scaled so nothing clips. */
-  function sign(progress){
-    const text=name.toUpperCase();
-    const capH=H*0.082, tracking=0.30, spacew=0.55;                 // em units (of cap height)
-    let adv=0; const items=[];
-    for(const ch of text){
-      if(ch===' '){ adv+=spacew; continue; }
-      const gl=GLYPHS[ch]; if(!gl){ adv+=0.55+tracking; continue; }
-      items.push({gl,x0:adv}); adv+=gl.w+tracking;
-    }
-    let em=capH, totalW=(adv-tracking)*em; const maxW=W*0.9;
-    if(totalW>maxW){ em*=maxW/totalW; totalW=(adv-tracking)*em; }
-    const startX=(W-totalW)/2, baseY=H*0.955, topY=baseY-em, jit=0.6*S;
-    const segs=[]; let total=0, li=0;                               // build one pen-path across the whole name
-    for(const it of items){
-      const bx=startX+it.x0*em, yj=Math.sin(li*1.7)*em*0.02;        // tiny per-letter baseline wobble
-      for(const pl of it.gl.s){ let prev=null;
-        for(let i=0;i<pl.length;i++){
-          const X=bx+pl[i][0]*em + Math.sin((li*7+i)*12.9898)*jit;
-          const Y=topY+pl[i][1]*em + yj + Math.sin((li*5+i)*7.13)*jit;
-          if(prev){ const L=Math.hypot(X-prev[0],Y-prev[1]); if(L>0){ segs.push({a:prev,b:[X,Y],L,from:total}); total+=L; } }
-          prev=[X,Y];
-        }
-      }
-      li++;
-    }
-    const len=Math.max(0,Math.min(1,progress))*total;              // draw the path up to the nib
-    ctx.save(); ctx.strokeStyle='#141414'; ctx.lineWidth=Math.max(1.8,2.6*S); ctx.lineCap='round'; ctx.lineJoin='round';
-    let tip=null;
-    for(const seg of segs){ if(seg.from>=len) break;
-      const t1=Math.min(1,(len-seg.from)/seg.L);
-      const ex=seg.a[0]+(seg.b[0]-seg.a[0])*t1, ey=seg.a[1]+(seg.b[1]-seg.a[1])*t1;
-      ctx.beginPath(); ctx.moveTo(seg.a[0],seg.a[1]); ctx.lineTo(ex,ey); ctx.stroke();
-      tip=[ex,ey];
-    }
-    ctx.restore();
-    return (progress<1 && tip) ? {x:tip[0], y:tip[1]} : null;       // nib rides the writing frontier
-  }
+  const lettering=makeLetteringPlan(name,W,H);
+  const sign=progress=>paintLettering(ctx,lettering,progress,S);
 
   if(reduced){ctx.drawImage(layers.base,0,0);sign(1);finish();return;}
   /* the wrong doodle, on the margin next to the drawing */
@@ -943,7 +981,8 @@ async function draw(name, src){
   const inkMask=offscreen(W,H), im=inkMask.getContext('2d');
   const colour=offscreen(W,H), cc=colour.getContext('2d');
   const pencilState=strokeState(layers.pencil), lineState=strokeState(layers.fineliner), markerState=strokeState(layers.marker);
-  const phases=PHASES.filter(phase=>phase.key!=='gag'||doodle);
+  const phases=PHASES.filter(phase=>phase.key!=='gag'||doodle)
+    .map(phase=>phase.key==='sign'?{...phase,dur:lettering.duration}:phase);
   const total=phases.reduce((sum,phase)=>sum+phase.dur,0);
   let phaseIdx=0, phaseElapsed=0, elapsed=0, lastFrame=null;
   let lineProgress=0, settle=0;
@@ -1036,7 +1075,7 @@ async function draw(name, src){
     } else if(phase.key==='sign'){
       ctx.drawImage(layers.base,0,0);
       const pen=sign(t);
-      if(pen){cursor.x=pen.x;cursor.y=pen.y;cursor.lift=false;drawTool('pen');soundKind='pen';}
+      if(pen){Object.assign(cursor,pen);drawTool('pen');soundKind='pen';}
     }
     drawingSound.contact(soundKind,cursor,delta);
     raf=requestAnimationFrame(frame);
