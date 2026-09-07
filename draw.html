@@ -540,17 +540,54 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let W=0,H=0, raf=0, job=0;
 
-/* Quiet paper textures, made locally. Audio starts only after Enable sound. */
+/* Soft, close paper textures. Audio starts only after Enable sound. */
 class DrawingSound {
   constructor(){
-    this.context=null; this.enabled=false; this.previous=null;
+    this.context=null; this.enabled=false; this.previous=null; this.motion=0.35;
     this.profiles={
-      sketch:{frequency:1900,cutoff:6500,level:0.14},
-      line:{frequency:2700,cutoff:7200,level:0.10},
-      marker:{frequency:850,cutoff:3100,level:0.20},
-      eraser:{frequency:420,cutoff:1900,level:0.25},
-      pen:{frequency:2300,cutoff:6000,level:0.11}
+      sketch:{frequency:130,cutoff:1800,level:0.22},
+      line:{frequency:180,cutoff:2300,level:0.16},
+      marker:{frequency:85,cutoff:1050,level:0.24},
+      eraser:{frequency:65,cutoff:720,level:0.25},
+      pen:{frequency:150,cutoff:1950,level:0.18}
     };
+  }
+  paperBuffer(context){
+    const rate=context.sampleRate, length=Math.round(rate*8), fade=Math.round(rate*0.3);
+    const buffer=context.createBuffer(1,length,rate), samples=buffer.getChannelData(0);
+    const raw=new Float32Array(length+fade);
+    // Layer correlated noise at several scales: a warm body with a little
+    // fine paper grain. No periodic modulation or narrow resonant whistle.
+    const times=[0.018,0.004,0.0009,0.0002];
+    const poles=times.map(time=>Math.exp(-1/(rate*time)));
+    const weights=[0.30,0.28,0.23,0.13];
+    const normal=poles.map(pole=>Math.sqrt((1+pole)/(1-pole)));
+    const bands=new Float64Array(poles.length);
+    let seed=7391, grain=0.8, target=0.8, nextGrain=0;
+    const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+    const grainEase=1-Math.exp(-1/(rate*0.012));
+    for(let i=0;i<raw.length;i++){
+      if(i>=nextGrain){target=0.66+random()*0.34;nextGrain=i+Math.round(rate*(0.035+random()*0.085));}
+      grain+=(target-grain)*grainEase;
+      const white=random()*2-1;
+      let paper=white*0.06;
+      for(let k=0;k<bands.length;k++){
+        bands[k]=poles[k]*bands[k]+(1-poles[k])*white;
+        paper+=bands[k]*normal[k]*weights[k];
+      }
+      raw[i]=paper*grain;
+    }
+    let energy=0, peak=0;
+    for(let i=0;i<length;i++){
+      // At the wrap, the buffer continues into raw[length] and crossfades
+      // back to its beginning. Both join slopes are smooth.
+      const u=Math.min(1,i/fade), blend=u*u*(3-2*u);
+      const sample=i<fade?raw[length+i]*(1-blend)+raw[i]*blend:raw[i];
+      samples[i]=sample;energy+=sample*sample;peak=Math.max(peak,Math.abs(sample));
+    }
+    const scale=Math.min(0.8/(peak||1),0.24/(Math.sqrt(energy/length)||1));
+    for(let i=0;i<length;i++)samples[i]*=scale;
+    return buffer;
   }
   async enable(){
     const Context=globalThis.AudioContext||globalThis.webkitAudioContext;
@@ -558,17 +595,9 @@ class DrawingSound {
     try {
       if(!this.context){
         const context=new Context(); this.context=context;
-        const buffer=context.createBuffer(1,context.sampleRate*3,context.sampleRate);
-        const samples=buffer.getChannelData(0);
-        let seed=7391;
-        for(let i=0;i<samples.length;i++){
-          seed=(Math.imul(seed,1664525)+1013904223)>>>0;
-          const time=i/context.sampleRate;
-          const grain=0.62+0.22*Math.sin(time*Math.PI*2*37)+0.12*Math.sin(time*Math.PI*2*83);
-          samples[i]=(seed/2147483648-1)*grain;
-        }
+        const buffer=this.paperBuffer(context);
         const source=context.createBufferSource();source.buffer=buffer;source.loop=true;
-        this.tone=context.createBiquadFilter();this.tone.type='bandpass';this.tone.Q.value=0.7;
+        this.tone=context.createBiquadFilter();this.tone.type='highpass';this.tone.Q.value=0.5;
         this.softener=context.createBiquadFilter();this.softener.type='lowpass';this.softener.Q.value=0.5;
         this.volume=context.createGain();this.volume.gain.value=0;
         source.connect(this.tone);this.tone.connect(this.softener);this.softener.connect(this.volume);
@@ -587,30 +616,31 @@ class DrawingSound {
       return false;
     }
   }
-  silence(){
+  silence(immediate=false){
     this.previous=null;
     if(!this.context||!this.volume)return;
     const now=this.context.currentTime;
     this.volume.gain.cancelScheduledValues(now);
-    this.volume.gain.setTargetAtTime(0,now,0.012);
+    this.volume.gain.setTargetAtTime(0,now,immediate?0.012:0.04);
   }
-  disable(){this.enabled=false;this.silence();}
+  disable(){this.enabled=false;this.silence(true);}
   contact(kind,cursor,delta){
     if(!this.enabled||!this.context||this.context.state!=='running'||document.hidden||!kind||cursor.lift||delta<=0){
-      this.silence();return;
+      this.silence(document.hidden||!this.enabled);return;
     }
     const profile=this.profiles[kind];if(!profile){this.silence();return;}
     const previous=this.previous;
     const speed=previous&&previous.kind===kind?Math.hypot(cursor.x-previous.x,cursor.y-previous.y)/Math.max(delta,1/240)/W:0.5;
     this.previous={x:cursor.x,y:cursor.y,kind};
-    const now=this.context.currentTime, level=profile.level*(0.4+0.6*Math.min(1,speed/2));
-    this.tone.frequency.setTargetAtTime(profile.frequency,now,0.025);
-    this.softener.frequency.setTargetAtTime(profile.cutoff,now,0.025);
-    if(this.panner)this.panner.pan.setTargetAtTime(Math.max(-0.35,Math.min(0.35,(cursor.x/W-0.5)*0.7)),now,0.03);
+    this.motion+=(Math.min(1,speed/2)-this.motion)*(1-Math.exp(-delta/0.12));
+    const now=this.context.currentTime, level=profile.level*(0.58+0.42*this.motion);
+    this.tone.frequency.setTargetAtTime(profile.frequency,now,0.06);
+    this.softener.frequency.setTargetAtTime(profile.cutoff,now,0.06);
+    if(this.panner)this.panner.pan.setTargetAtTime(Math.max(-0.16,Math.min(0.16,(cursor.x/W-0.5)*0.32)),now,0.10);
     this.volume.gain.cancelScheduledValues(now);
-    this.volume.gain.setTargetAtTime(level,now,0.008);
+    this.volume.gain.setTargetAtTime(level,now,0.025);
     // A missed frame must never leave a scratch playing indefinitely.
-    this.volume.gain.setTargetAtTime(0,now+0.08,0.025);
+    this.volume.gain.setTargetAtTime(0,now+0.09,0.04);
   }
 }
 const drawingSound=new DrawingSound();
@@ -842,7 +872,7 @@ async function choose(name){
 
 async function draw(name, src){
   const myJob=++job; cancelAnimationFrame(raf); resumeDrawing=null;
-  drawingSound.silence();
+  drawingSound.silence(true);
   actionsEl.hidden=true; document.getElementById('save').hidden=false;
   document.getElementById('again').textContent='Draw it again';
   knot.style.opacity=0; setStitch(0);
@@ -1067,10 +1097,10 @@ document.getElementById('save').addEventListener('click',()=>{
   const a=document.createElement('a'); a.download=`${current.replace(/\s+/g,'-').toLowerCase()}-drawn.png`; a.href=cv.toDataURL('image/png'); a.click();
 });
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){cancelAnimationFrame(raf);drawingSound.silence();}
+  if(document.hidden){cancelAnimationFrame(raf);drawingSound.silence(true);}
   else if(resumeDrawing)resumeDrawing();
 });
-addEventListener('pagehide',()=>drawingSound.silence());
+addEventListener('pagehide',()=>drawingSound.silence(true));
 
 /* open with art, not a blank sheet: auto-draw one suburb on load */
 choose(DEMO);
