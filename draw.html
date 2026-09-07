@@ -22,11 +22,11 @@
   .page{max-width:1600px;margin:0 auto;min-height:100vh}
 
   /* title and suburb search */
-  .index{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:28px 40px 24px;border-bottom:1px solid var(--rule)}
+  .index{position:sticky;top:0;z-index:20;background:var(--paper);display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,360px);align-items:start;gap:24px;padding:28px 40px 24px;border-bottom:1px solid var(--rule)}
   .masthead{flex-shrink:0}
   .masthead h1{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:30px;line-height:1.05;margin:0 0 10px;letter-spacing:-.01em}
   .masthead p{margin:0;color:var(--graphite);font-size:14px;max-width:36ch}
-  .search-controls{display:flex;flex-direction:column;align-items:flex-end;gap:8px;width:360px;max-width:100%;min-width:0}
+  .search-controls{display:flex;flex-direction:column;align-items:flex-end;justify-self:end;gap:8px;width:360px;max-width:100%;min-width:0}
   .search{position:relative;width:100%;min-width:0}
   .search input{width:100%;border:0;border-bottom:1px solid var(--ink);border-radius:0;background:transparent;padding:12px 0;font:inherit;font-size:16px;color:var(--ink);outline:none}
   .search input::placeholder{color:var(--graphite)}
@@ -40,7 +40,7 @@
   .list mark{background:none;color:inherit;font-weight:500;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--rule)}
   .search-status{padding:14px;color:var(--graphite);font-size:14px}
   .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-  @media (max-width:640px){.index{align-items:stretch;flex-direction:column;gap:18px;padding:24px 16px 18px}.search-controls{width:100%}.masthead p{max-width:36ch}}
+  @media (max-width:640px){.index{grid-template-columns:minmax(0,1fr);gap:14px;padding:16px}.search-controls{grid-row:1;width:min(360px,100%)}.masthead{grid-row:2}.masthead h1{font-size:25px}.masthead p{display:none}.masthead .project-tabs{margin-top:10px}}
 
   /* studio */
   .studio{padding:36px 40px 48px;display:flex;flex-direction:column;gap:14px;min-width:0}
@@ -104,7 +104,7 @@
   .project-tab:hover{color:var(--ink)}
   .project-tab:focus-visible,.about-explore:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
   .workspace{min-width:0}
-  .studio[hidden],.about-panel[hidden],.search-controls[hidden]{display:none}
+  .studio[hidden],.about-panel[hidden]{display:none}
   .studio:focus-visible,.about-panel:focus-visible{outline:2px solid var(--rule);outline-offset:-4px}
   .about-panel{min-height:0;padding:52px 40px 64px}
   .about-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:clamp(36px,6vw,88px);max-width:1160px;margin:0 auto}
@@ -184,22 +184,22 @@
     <article class="about-layout" aria-labelledby="about-title">
       <div class="about-heading">
         <p class="story-kicker">About the project</p>
-        <h2 id="about-title">When a space<br>becomes a place.</h2>
+        <h2 id="about-title">Hello,<br>neighbour.</h2>
         <p class="about-byline">A creative project by<br>Anastasia Butrym</p>
       </div>
       <div class="about-copy">
-        <p class="about-lead">A street on a map becomes the street where someone knows your name. A stretch of water becomes the place you swim every morning. Somewhere you once passed through becomes somewhere you belong.</p>
-        <p>Sydney is a city of cities. Cross a bridge, turn off a main road, or walk a little further from the water, and the rhythm changes. Each suburb has its own habits, memories and ambitions. Each offers a different version of what life in Sydney can be.</p>
-        <p><em>Sydney: From Space to Place</em> explores how these neighbourhoods acquire their character. I draw them one by one, looking for the connections that turn a location into a place that matters to someone.</p>
-        <h3>The life between the buildings.</h3>
-        <p>Before I draw, I listen to the stories people tell about living here: what they love, what frustrates them, what they miss and what they hope will happen next. I look into the history beneath the streets and buildings. An old industrial waterfront can hold the memory of a working life, the pleasure of a morning walk and an argument about the future, all at once.</p>
-        <p>That is what interests me: how so many experiences come to inhabit the same ground. A newcomer and a lifelong resident may walk the same street and see quite different places.</p>
-        <h3>Giving those connections a shape.</h3>
-        <p>At Bondi, the beach that gave Apple's Bondi Blue its name spills out of a computer. In Balmain, a history of shipbuilding becomes the hull that carries a village. In Chippendale, gardens, galleries, homes and dinner gather inside a jacket pocket. I use these transformations to bring a neighbourhood's stories together in one image. Each impossible detail begins with something real.</p>
-        <h3>Getting to know a place, line by line.</h3>
-        <p>You can watch each portrait appear and read the stories behind its details as it takes shape. The drawing gives you time to notice how the pieces relate: a landmark and a daily ritual, an old industry and a new way of living, a private memory and a shared street.</p>
-        <p>As this collection grows, I hope it offers both recognition and discovery: a detail that makes you smile about your own suburb, or a reason to explore somewhere you have never been. With every portrait, I find another Sydney inside the one I thought I knew.</p>
-        <p class="about-signoff">Space becomes place through the lives we live in it.</p>
+        <p class="about-lead">I'm Ana. I'm glad you're here. Whether Sydney has been your home for years or you're still finding your feet, I'd love to show you around.</p>
+        <p>You probably know the feeling: a street becomes familiar, someone remembers your coffee order, and a little piece of the city starts to feel like yours. That's the change I'm exploring in <em>Sydney: From Space to Place</em>—how the spaces around us become places we care about.</p>
+        <p>Sydney keeps surprising me. Cross a bridge, turn a corner, or get off at a different stop, and you can find yourself in another little city. Each suburb has its own rhythm, memories and idea of a good day. I'd like you to meet them, one drawing at a time.</p>
+        <h3>Let me tell you what I found.</h3>
+        <p>Before I draw a neighbourhood, I listen to what people say about living there: the things they love, the things that drive them mad, the places they miss and the changes they're hoping for. I look into the history of its streets and buildings, too. An ordinary-looking corner can have a wonderful story to tell.</p>
+        <p>You might recognise some of these stories. You might remember the same place quite differently. That's part of what makes a neighbourhood interesting: we share the streets, but each of us brings a different life to them.</p>
+        <h3>Shall we look a little closer?</h3>
+        <p>Here, Bondi spills out of a blue iMac, Balmain sits inside an iron ship, and Chippendale fits into a jacket pocket. There's a reason for each of those strange choices. Bondi gave Apple's Bondi Blue its name; Balmain's shipyards helped shape its working life; Chippendale brings homes, gardens, art and dinner wonderfully close together.</p>
+        <p>As each picture appears, you can read about the details and why I drew them that way. Take your time. You may spot a familiar building first, then notice a small figure or a hidden piece of history that changes how you see the whole drawing.</p>
+        <h3>Start somewhere that means something to you.</h3>
+        <p>Look up your suburb, a place you used to live, or somewhere you've always wondered about. I hope you find something that makes you smile in recognition—and something that tempts you to go exploring. I'm still discovering Sydney, too. It's lovely to have your company.</p>
+        <p class="about-signoff">A city becomes a place<br>when we make a life in it.</p>
         <button class="about-explore" id="explore-suburbs" type="button">Find your suburb <span aria-hidden="true">↗</span></button>
       </div>
     </article>
@@ -596,7 +596,86 @@ const DOODLES = {
 
 /* Artist narratives: provided copy and researched interpretations of the existing artwork. */
 const STORIES = {
+  "Bondi Beach": {
+    "title": "The beach that became a computer",
+    "intro": "In 1998, Apple released its first iMac in Bondi Blue, a colour named after the water at this Sydney beach. Before some people had ever set foot on its sand, Bondi was already sitting on their desks. That unexpected journey gave me the whole drawing: I put the beach back inside the computer that borrowed its colour, then let the sea break out. The famous image of Bondi can travel anywhere. The place itself refuses to sit still.",
+    "items": [
+      {
+        "label": "The translucent blue iMac.",
+        "text": "This is why I drew a computer, and why it had to be this particular blue. The original iMac’s rounded, translucent casing made an everyday machine look almost aquatic. I enlarged it into a container for the neighbourhood. Apple had turned a beach into a colour; I reverse the process and let a whole beach grow out of the plastic."
+      },
+      {
+        "label": "The wave escaping the screen.",
+        "text": "The first iMac was designed to make getting online easier; the “i” referred to the internet. That gave me a second connection: surfing the web and surfing at Bondi. I made the pun physical. A surfer follows a wave straight through the screen’s boundary, where looking at the ocean suddenly becomes getting wet."
+      },
+      {
+        "label": "Bondi Pavilion on the sand.",
+        "text": "The pale building is Bondi Pavilion, which opened in 1929. Its history includes bathing facilities; after its 2022 restoration, it again brings together a theatre, gallery, music studios and community spaces. I kept it low and broad beneath the apartments. It gives the beach a public living room, somewhere the neighbourhood can gather with something other than a towel."
+      },
+      {
+        "label": "The crowded strip behind the beach.",
+        "text": "Behind the sand, Campbell Parade and the surrounding streets hold homes, cafés and the practical business of living beside a famous attraction. Conversations about moving here quickly turn from the view to rent, crowds and the journey to work. I pressed the buildings close together so the postcard has a reverse side: someone’s balcony, someone’s kitchen, someone trying to catch a bus."
+      },
+      {
+        "label": "The flags, lookout and tiny swimmers.",
+        "text": "Bondi’s red-and-yellow flags mark a patrolled swimming area. I made them small but legible beside the enormous wave: a few pieces of fabric organise how people enter something far larger than themselves. The lookout and swimmers bring care into the picture. This much freedom on a crowded beach depends on people paying attention."
+      },
+      {
+        "label": "The pool at Bondi Icebergs.",
+        "text": "Bondi Icebergs began in 1929 when local lifesavers formed a winter swimming club to maintain their fitness. That makes the pool more than a beautiful blue rectangle. I set its disciplined lanes against the unruly surf: one person waits for a wave; another returns, stroke after stroke, even when the water is cold. Both belong to Bondi."
+      },
+      {
+        "label": "The cable becoming a coastal walk.",
+        "text": "The Bondi to Coogee coastal walk runs for six kilometres, linking headlands and beaches including Tamarama and Bronte. I turned the computer’s cable into that route. Its connection now leads outside, carrying walkers and runners around the rocks. Follow it far enough and the famous beach becomes one stop in a much longer conversation with the coast."
+      },
+      {
+        "label": "The blue swatches and unfinished edges.",
+        "text": "A product can be assigned one colour; seawater keeps changing with depth, weather and light. I left the blue tests and pencil lines visible because Bondi Blue is only the beginning of the story. The screen offers a recognisable image, but the wave, path and people keep pulling it apart. I wanted a place you could enter, even after you thought you knew its picture."
+      }
+    ],
+    "slogan": "Life beyond the frame."
+  },
+  "Sydney": {
+    "title": "A city with several clocks",
+    "intro": "You can spend the same hour in central Sydney answering emails above the street, eating below an office tower, boarding a ferry at Circular Quay or passing beneath it all on a train. Yet discussions of the city often turn on one question: when does it feel alive? I drew those competing hours inside a single impossible building. Its rooms, clock and transport routes let us see lives that usually pass one another without meeting.",
+    "items": [
+      {
+        "label": "The sandstone building opened like a doll’s house.",
+        "text": "I borrowed the sandstone, arches and ironwork of Sydney’s nineteenth-century civic architecture, then pulled the façade away. This is an invented building, assembled to show what a handsome street frontage conceals: work, sleep, shopping and meals. From outside, the city can look like property. Cut through the wall and it becomes a collection of things people are doing."
+      },
+      {
+        "label": "The clock divided between day and night.",
+        "text": "People describing the CBD disagree about its rhythm: some know the early coffee and commute, others the evening meal, a performance or the streets after closing time. I split the clock into daylight and darkness and hung it outside the building. Everyone can see its face, but each room seems to be living by a different hour."
+      },
+      {
+        "label": "The offices, bed, dining room and washing.",
+        "text": "I stacked these ordinary interiors close enough for their routines to overlap. Someone’s working day continues above another person’s dinner; a bed waits while the street remains busy; washing makes a home visible near the roof. Those small objects matter to me because a central business district also contains people whose lives continue after the business day ends."
+      },
+      {
+        "label": "The road peeling away.",
+        "text": "George Street’s transformation into a pedestrian boulevard gave me this gesture. Traffic lanes have made way for broad walking areas, trees and places to sit outside. I lifted a strip of asphalt like a ribbon and sent its cars off the edge. In the space it releases, people can occupy the street with their whole bodies, instead of being squeezed along its margins."
+      },
+      {
+        "label": "The red tram and people at street level.",
+        "text": "Light rail returned to George Street in December 2019, connecting Circular Quay with the south-eastern suburbs. I placed the tram alongside walkers, a cyclist and a dog so movement has a human scale. The line threads through the drawing like a familiar daily instruction: get off here, cross the street, meet someone."
+      },
+      {
+        "label": "The train beneath the foundations.",
+        "text": "In August 2024, metro services began running through new tunnels under the harbour and CBD. I cut open the ground to show another city beneath the visible one. Above, the old building holds its pose; below, passengers are already travelling somewhere else. The composition needs that hidden movement, the life of a place that cannot be read from its skyline."
+      },
+      {
+        "label": "The ferry leaving an upper floor.",
+        "text": "At Circular Quay, ferries make the harbour part of the everyday transport network. I lifted that familiar journey into the building and let a ribbon of water carry a ferry out of a room. It is an impossible shortcut with an ordinary purpose: getting home. I wanted the harbour to enter the working city, as it does in people’s actual days."
+      },
+      {
+        "label": "The blue Tank Stream underneath it all.",
+        "text": "The Tank Stream supplied freshwater to Gadigal people long before the British colony was established at Sydney Cove in 1788. Its course was later enclosed and survives beneath the streets. I brought that hidden water back into view below the foundations. The drawing ends there, with a route older than the tram, the railway and every clock above it."
+      }
+    ],
+    "slogan": "Every hour, another life."
+  },
   "Balmain": {
+    "title": "The village inside the ship",
     "intro": "The Balmain people describe today is full of walks, bookshops, old pubs and places to stop by the water. Its industrial history tells another story: dry docks, foundries, organised labour and even coal mining beneath the peninsula. I wanted both to occupy the same picture. So I built the neighbourhood inside a great iron vessel, with a comfortable village on deck and the work that helped make it still visible below.",
     "items": [
       {
@@ -632,10 +711,10 @@ const STORIES = {
         "text": "Beyond the village, change continues around White Bay and Rozelle. The future Bays metro station is being built between Glebe Island and White Bay Power Station, outside Balmain’s old residential streets. I left this edge unfinished: new connections and development are approaching the peninsula, but their place in its daily life is still being drawn. The ship has a past; it has not reached its last port."
       }
     ],
-    "slogan": "The past has good company.",
-    "title": "The village inside the ship"
+    "slogan": "The past has good company."
   },
   "Barangaroo": {
+    "title": "What arrived inside the container",
     "intro": "Before Barangaroo became a place for office towers, waterfront meals and harbour swims, it was a container terminal. That change gave me an image I could not leave alone: what if a shipping container opened and an entire new neighbourhood came out? I filled a rusty iron box with glass, sandstone, trees and people. The pleasure of walking beside the water sits inside a larger question about who gets to shape, enter and use this extraordinary piece of shore.",
     "items": [
       {
@@ -672,49 +751,10 @@ const STORIES = {
       }
     ],
     "provenance": "Rewritten from artist-supplied text; place and history details checked against public sources.",
-    "slogan": "The future comes ashore.",
-    "title": "What arrived inside the container"
-  },
-  "Bondi Beach": {
-    "intro": "In 1998, Apple released its first iMac in Bondi Blue, a colour named after the water at this Sydney beach. Before some people had ever set foot on its sand, Bondi was already sitting on their desks. That unexpected journey gave me the whole drawing: I put the beach back inside the computer that borrowed its colour, then let the sea break out. The famous image of Bondi can travel anywhere. The place itself refuses to sit still.",
-    "items": [
-      {
-        "label": "The translucent blue iMac.",
-        "text": "This is why I drew a computer, and why it had to be this particular blue. The original iMac’s rounded, translucent casing made an everyday machine look almost aquatic. I enlarged it into a container for the neighbourhood. Apple had turned a beach into a colour; I reverse the process and let a whole beach grow out of the plastic."
-      },
-      {
-        "label": "The wave escaping the screen.",
-        "text": "The first iMac was designed to make getting online easier; the “i” referred to the internet. That gave me a second connection: surfing the web and surfing at Bondi. I made the pun physical. A surfer follows a wave straight through the screen’s boundary, where looking at the ocean suddenly becomes getting wet."
-      },
-      {
-        "label": "Bondi Pavilion on the sand.",
-        "text": "The pale building is Bondi Pavilion, which opened in 1929. Its history includes bathing facilities; after its 2022 restoration, it again brings together a theatre, gallery, music studios and community spaces. I kept it low and broad beneath the apartments. It gives the beach a public living room, somewhere the neighbourhood can gather with something other than a towel."
-      },
-      {
-        "label": "The crowded strip behind the beach.",
-        "text": "Behind the sand, Campbell Parade and the surrounding streets hold homes, cafés and the practical business of living beside a famous attraction. Conversations about moving here quickly turn from the view to rent, crowds and the journey to work. I pressed the buildings close together so the postcard has a reverse side: someone’s balcony, someone’s kitchen, someone trying to catch a bus."
-      },
-      {
-        "label": "The flags, lookout and tiny swimmers.",
-        "text": "Bondi’s red-and-yellow flags mark a patrolled swimming area. I made them small but legible beside the enormous wave: a few pieces of fabric organise how people enter something far larger than themselves. The lookout and swimmers bring care into the picture. This much freedom on a crowded beach depends on people paying attention."
-      },
-      {
-        "label": "The pool at Bondi Icebergs.",
-        "text": "Bondi Icebergs began in 1929 when local lifesavers formed a winter swimming club to maintain their fitness. That makes the pool more than a beautiful blue rectangle. I set its disciplined lanes against the unruly surf: one person waits for a wave; another returns, stroke after stroke, even when the water is cold. Both belong to Bondi."
-      },
-      {
-        "label": "The cable becoming a coastal walk.",
-        "text": "The Bondi to Coogee coastal walk runs for six kilometres, linking headlands and beaches including Tamarama and Bronte. I turned the computer’s cable into that route. Its connection now leads outside, carrying walkers and runners around the rocks. Follow it far enough and the famous beach becomes one stop in a much longer conversation with the coast."
-      },
-      {
-        "label": "The blue swatches and unfinished edges.",
-        "text": "A product can be assigned one colour; seawater keeps changing with depth, weather and light. I left the blue tests and pencil lines visible because Bondi Blue is only the beginning of the story. The screen offers a recognisable image, but the wave, path and people keep pulling it apart. I wanted a place you could enter, even after you thought you knew its picture."
-      }
-    ],
-    "slogan": "Life beyond the frame.",
-    "title": "The beach that became a computer"
+    "slogan": "The future comes ashore."
   },
   "Camperdown": {
+    "title": "Where a thought crosses the street",
     "intro": "In Camperdown, two immense neighbours organise thousands of small journeys: the University of Sydney and Royal Prince Alfred Hospital. One draws people towards a lecture, laboratory or exam; the other towards a shift, an appointment or someone they love. I joined them with arches and a burgundy loop, turning the neighbourhood into a body in circulation. Its story follows the distance an idea can travel from being taught to becoming useful at a bedside.",
     "items": [
       {
@@ -751,10 +791,10 @@ const STORIES = {
       }
     ],
     "provenance": "Rewritten from artist-supplied text; place and history details checked against public sources.",
-    "slogan": "Where thought becomes care.",
-    "title": "Where a thought crosses the street"
+    "slogan": "Where thought becomes care."
   },
   "Chippendale": {
+    "title": "A whole neighbourhood in your pocket",
     "intro": "A tower grows a garden up its walls. Mirrors borrow sunlight for the ground below. A former brewery sits close to a gallery of contemporary Chinese art, and dinner waits beneath lanterns in a narrow lane. Chippendale already brings together things that sound invented when you list them. I put them inside the pocket of a grey jacket: a small neighbourhood carrying a surprisingly large inner life, with the things you might need or discover kept close to hand.",
     "items": [
       {
@@ -791,47 +831,1099 @@ const STORIES = {
       }
     ],
     "provenance": "Rewritten from artist-supplied text; place and history details checked against public sources.",
-    "slogan": "Keep a little wonder close.",
-    "title": "A whole neighbourhood in your pocket"
+    "slogan": "Keep a little wonder close."
   },
-  "Sydney": {
-    "intro": "You can spend the same hour in central Sydney answering emails above the street, eating below an office tower, boarding a ferry at Circular Quay or passing beneath it all on a train. Yet discussions of the city often turn on one question: when does it feel alive? I drew those competing hours inside a single impossible building. Its rooms, clock and transport routes let us see lives that usually pass one another without meeting.",
+  "Abbotsford": {
+    "title": "A neighbourhood unwrapped",
+    "intro": "Come a little closer to the chocolate: those squares are turning into homes. Abbotsford Cove occupies the grounds of a former Nestlé factory, which began production in 1918. I wanted you to see that transformation happening, with the river curling around the whole neighbourhood like the foil of an opened bar.",
     "items": [
       {
-        "label": "The sandstone building opened like a doll’s house.",
-        "text": "I borrowed the sandstone, arches and ironwork of Sydney’s nineteenth-century civic architecture, then pulled the façade away. This is an invented building, assembled to show what a handsome street frontage conceals: work, sleep, shopping and meals. From outside, the city can look like property. Cut through the wall and it becomes a collection of things people are doing."
+        "label": "The giant chocolate bar.",
+        "text": "Nestlé's factory is the reason for this particular foundation. I turned its product into the land itself, so the neighbourhood's industrial past remains something substantial beneath the homes you see today."
       },
       {
-        "label": "The clock divided between day and night.",
-        "text": "People describing the CBD disagree about its rhythm: some know the early coffee and commute, others the evening meal, a performance or the streets after closing time. I split the clock into daylight and darkness and hung it outside the building. Everyone can see its face, but each room seems to be living by a different hour."
+        "label": "The factory and its departing cargo.",
+        "text": "The works received supplies by water and used a small tramway from their private jetty. I sent chocolate out of the brick building on an exaggerated conveyor: the waterfront was once a working connection."
       },
       {
-        "label": "The offices, bed, dining room and washing.",
-        "text": "I stacked these ordinary interiors close enough for their routines to overlap. Someone’s working day continues above another person’s dinner; a bed waits while the street remains busy; washing makes a home visible near the roof. Those small objects matter to me because a central business district also contains people whose lives continue after the business day ends."
+        "label": "Squares becoming apartment façades.",
+        "text": "The factory closed in 1991 and its grounds became Abbotsford Cove's residential development. I let the divisions in a chocolate bar become doors and windows. A production site gradually learns the shapes of domestic life."
       },
       {
-        "label": "The road peeling away.",
-        "text": "George Street’s transformation into a pedestrian boulevard gave me this gesture. Traffic lanes have made way for broad walking areas, trees and places to sit outside. I lifted a strip of asphalt like a ribbon and sent its cars off the edge. In the space it releases, people can occupy the street with their whole bodies, instead of being squeezed along its margins."
+        "label": "Abbotsford House on the lawn.",
+        "text": "Arthur Renwick's house gave the suburb its name and later served as factory offices. I kept it apart from the transforming blocks. The same building has watched the land around it serve remarkably different purposes."
       },
       {
-        "label": "The red tram and people at street level.",
-        "text": "Light rail returned to George Street in December 2019, connecting Circular Quay with the south-eastern suburbs. I placed the tram alongside walkers, a cyclist and a dog so movement has a human scale. The line threads through the drawing like a familiar daily instruction: get off here, cross the street, meet someone."
+        "label": "The two enormous oars.",
+        "text": "Sydney Rowing Club and the peninsula's other rowing clubs connect Abbotsford with the river through practice and teamwork. My oars cross the composition like tools left after work, making rowing part of the neighbourhood's structure."
       },
       {
-        "label": "The train beneath the foundations.",
-        "text": "In August 2024, metro services began running through new tunnels under the harbour and CBD. I cut open the ground to show another city beneath the visible one. Above, the old building holds its pose; below, passengers are already travelling somewhere else. The composition needs that hidden movement, the life of a place that cannot be read from its skyline."
+        "label": "The crew and the ferry.",
+        "text": "Abbotsford's ferry wharf and rowing sheds put different journeys on the same water. I placed a crew beside a passenger ferry: one boat measures a training rhythm while the other carries somebody into their day."
       },
       {
-        "label": "The ferry leaving an upper floor.",
-        "text": "At Circular Quay, ferries make the harbour part of the everyday transport network. I lifted that familiar journey into the building and let a ribbon of water carry a ferry out of a room. It is an impossible shortcut with an ordinary purpose: getting home. I wanted the harbour to enter the working city, as it does in people’s actual days."
+        "label": "The key with a swimming pool inside.",
+        "text": "I imagined the residential Cove's shared amenities held inside a house key. The little enclosed pool contrasts with the broad public river. Moving here means entering a home, but also a particular arrangement of shared space."
       },
       {
-        "label": "The blue Tank Stream underneath it all.",
-        "text": "The Tank Stream supplied freshwater to Gadigal people long before the British colony was established at Sydney Cove in 1788. Its course was later enclosed and survives beneath the streets. I brought that hidden water back into view below the foundations. The drawing ends there, with a route older than the tram, the railway and every clock above it."
+        "label": "The wrapper and old river photograph.",
+        "text": "The torn photograph interrupts the bright redevelopment with an earlier view. I left its edges rough, like the foil around the chocolate. As you unwrap this place, another Abbotsford keeps appearing beneath it."
       }
     ],
-    "slogan": "Every hour, another life.",
-    "title": "A city with several clocks"
+    "slogan": "A sweet past, a life by the river."
+  },
+  "Airds": {
+    "title": "The threads that make a neighbourhood",
+    "intro": "Follow the red thread with me. It passes through old homes, turning houses and new streets, but the people keep hold of it. Airds–Bradbury's renewal changes the physical neighbourhood on a large scale. I drew a loom to ask what needs to stay connected while the pattern is being remade.",
+    "items": [
+      {
+        "label": "The enormous wooden loom.",
+        "text": "The renewal project changes housing, roads and public spaces together. A loom let me show that interdependence: move one thread and its neighbours respond. Rebuilding a suburb means working with an existing fabric of lives."
+      },
+      {
+        "label": "The older houses facing green paths.",
+        "text": "Airds was planned with the separation of pedestrians and vehicles associated with Radburn layouts. I gathered these houses around their shared green approaches. The design contains a particular hope about how neighbours might meet."
+      },
+      {
+        "label": "The houses turning on their axes.",
+        "text": "The renewal introduces a different street pattern. I made houses rotate between the old layout and the new one, showing an address changing its relationship to the street. Inside each little turning box, someone still has a home."
+      },
+      {
+        "label": "The red thread through the doorways.",
+        "text": "This is my imagined line of continuity: friendships, family connections and the people who recognise you. It runs through buildings of different ages because those relationships cannot simply be replaced along with the bricks."
+      },
+      {
+        "label": "The neighbours holding the yarn.",
+        "text": "Older residents, parents and children all have a hand in the thread. The renewal includes housing for seniors as well as other households. I wanted the people most affected by change to help hold the composition together."
+      },
+      {
+        "label": "The new homes and shared meeting place.",
+        "text": "Plans for Airds–Bradbury combine social and private housing with community facilities. I brought different front doors into the same street. The small gathering at the end matters as much to my picture as the new roofs."
+      },
+      {
+        "label": "The oval and planted spaces.",
+        "text": "The renewal includes the Kevin Wheatley VC Memorial Playing Fields and the regeneration of surrounding bushland. I gave the green spaces room beyond the loom. A neighbourhood also needs places where nobody is required to buy anything."
+      },
+      {
+        "label": "The animals and branches at the edges.",
+        "text": "I let koalas, birds and flowering branches frame the human construction. They ask you to notice a second set of connections through the landscape. The new weave needs to leave space for lives that never appear on a housing plan."
+      }
+    ],
+    "slogan": "New streets. Threads that hold."
+  },
+  "Annandale": {
+    "title": "Look closer: a whole village is here",
+    "intro": "At first you might notice Annandale's handsome terraces. I wanted you to look long enough to see the life between them, and the much larger projects pressing against their edges. So I made the neighbourhood into a magnifying glass: a place whose small details deserve the same attention as the infrastructure around it.",
+    "items": [
+      {
+        "label": "The great magnifying glass.",
+        "text": "The lens enlarges a café, a garden, children and conversations. I use it to change what counts as important. A city's plans are often seen from above; a neighbourhood starts making sense when you come close."
+      },
+      {
+        "label": "The pointed houses around the rim.",
+        "text": "Annandale's Witches Houses on Johnston Street are named for their pointed, hat-like forms. I stretched that Gothic vocabulary around the frame. Their extraordinary silhouettes become the edge through which you look at ordinary daily life."
+      },
+      {
+        "label": "The terraces inside the lens.",
+        "text": "Annandale's surviving historic streets give the suburb much of its recognisable character. I opened them towards the garden and pavement, letting you see how a façade becomes a setting for a morning rather than simply an architectural specimen."
+      },
+      {
+        "label": "The musicians and neighbours.",
+        "text": "The small performance and café gathering bring sound into the otherwise quiet drawing. I wanted the houses to contain reasons to come outside: hearing music, seeing a friend, staying for a conversation you had not planned."
+      },
+      {
+        "label": "The knot of roads and ventilation stacks.",
+        "text": "The nearby Rozelle Interchange brought large transport infrastructure to the neighbourhood's edge. I tangled its roads into an almost impossible knot. The difference in scale makes the little street inside the lens feel especially precious."
+      },
+      {
+        "label": "The grass lifted like a carpet.",
+        "text": "The discovery of asbestos in Rozelle Parklands mulch in 2024 drew attention to what lay beneath a newly made green surface. I lifted the grass in the drawing. A park's appearance is only one part of its story."
+      },
+      {
+        "label": "The people measuring future buildings.",
+        "text": "At the unfinished edge, figures hold rulers, plans and different views of what should come next. Their oversized tools turn planning into a visible conversation. You can see that the next version of a place is something people negotiate."
+      },
+      {
+        "label": "The exposed ground and watercourse.",
+        "text": "Whites Creek and the area's aqueducts reveal how water and infrastructure cross this landscape. I cut through the soil beneath the lens, leaving layers and a channel visible. The village continues below the level at which we usually walk."
+      }
+    ],
+    "slogan": "A village worth a closer look."
+  },
+  "Artarmon": {
+    "title": "The two wings of Artarmon",
+    "intro": "Stand near Artarmon station and two different impressions of the suburb begin to meet: leafy streets and the practical world of workshops, deliveries and technology. I gave them the wings of one creature, with the railway for its body. Look across it and you can see how much work supports an apparently quiet place.",
+    "items": [
+      {
+        "label": "The railway forming the body.",
+        "text": "Artarmon's station opened in 1898, after the North Shore line had already arrived. I made the track the central spine. The suburb gathers around the railway, which connects local routines to journeys across the city."
+      },
+      {
+        "label": "The leafy wing of houses.",
+        "text": "The residential streets include many detached homes, especially east of the railway. I nestled them in a green wing shaped like foliage. From a distance it reads as one soft mass; close up, every roof contains a separate life."
+      },
+      {
+        "label": "The bridge and people crossing.",
+        "text": "The station links shops and streets on either side of the tracks. I made that crossing conspicuous, with pedestrians passing over the train. It joins the two wings through the ordinary act of walking somewhere."
+      },
+      {
+        "label": "The workshops and delivery trucks.",
+        "text": "Artarmon's industrial area developed from earlier brickmaking into a broader working district. I opened its roller doors and sent trucks between the buildings. The suburb's character includes the people who arrive here to repair, supply and make things."
+      },
+      {
+        "label": "The server cabinets and branching cables.",
+        "text": "Data-centre development adds another layer to Artarmon's working landscape. I enlarged the racks until their cables formed the veins of the right-hand wing. The information we imagine floating in a cloud still needs rooms, power and a physical address."
+      },
+      {
+        "label": "The aerial and leafy antenna.",
+        "text": "Artarmon also has a broadcasting history, including television facilities and transmission infrastructure. I paired an aerial with a living branch. This creature receives two kinds of signal: one from the technological city, another from its planted streets."
+      },
+      {
+        "label": "The school and playing court.",
+        "text": "Artarmon Public School is part of the neighbourhood's everyday geography. I put children and a court beneath the larger houses, bringing the drawing back to an afternoon-scale question: where do you go when the school day ends?"
+      },
+      {
+        "label": "The people pulling at a housing plan.",
+        "text": "Local discussions about growth and the village's future give the rolled plan its tension. My figures pull from different sides, while an apartment building rises between them. The two wings belong together; deciding how they should change takes collective work."
+      }
+    ],
+    "slogan": "Quiet streets. A city at work."
+  },
+  "Ashfield": {
+    "title": "What we bring, and what becomes home",
+    "intro": "Have you ever opened a suitcase and felt that a whole life was packed inside? I drew Ashfield that way. Its history of migration, its railway and its rooms full of food and conversation suggested a place where arrivals gradually become neighbours. The luggage opens around a shared green centre.",
+    "items": [
+      {
+        "label": "The suitcases made into rooms.",
+        "text": "Ashfield's changing communities have brought different domestic traditions into the same suburb. I gave every case an interior, with furniture, meals and people. Arrival is only the beginning; eventually you need somewhere to put the kettle."
+      },
+      {
+        "label": "The kitchen with bamboo steamers.",
+        "text": "Liverpool Road's Shanghainese restaurants are a particular part of Ashfield's food history. Taste of Shanghai began here in 2007. I put the steamers inside a home-shaped suitcase because a public food culture can begin with memories of family meals."
+      },
+      {
+        "label": "The older sitting room.",
+        "text": "Ashfield's nineteenth-century houses record an earlier period of settlement and suburban growth. I opened a formal room at the beginning of the sequence. It is one arrival among many, carrying its own ideas about comfort and belonging."
+      },
+      {
+        "label": "The coloured conversation bubbles.",
+        "text": "Chinese migration and the post-war Polish community are among the histories that have shaped Ashfield. I made voices visible as coloured bubbles, allowing conversations to travel between rooms. The shared street becomes a place of translation."
+      },
+      {
+        "label": "The railway looping around the neighbourhood.",
+        "text": "Ashfield sits on Sydney's established suburban railway corridor. I bent the tracks into a loop carrying the suitcases. The line that brings people here becomes a frame for the lives they build after getting off."
+      },
+      {
+        "label": "The park and its little gathering place.",
+        "text": "Ashfield Park provides room for walking, play and community gatherings. I placed a green commons at the composition's centre. Around it, everyone has different rooms; here, there is space to sit within sight of one another."
+      },
+      {
+        "label": "The family unfolding a small house.",
+        "text": "I made the model home open like a paper toy. It represents the careful work of settling in: deciding what fits, what you can afford, and how several lives might share a few rooms. The hands make the architecture personal."
+      },
+      {
+        "label": "The unfinished tall suitcase.",
+        "text": "The largest case is still a drawing, with an apartment building growing inside it. I leave room for the next arrivals and the questions new housing brings. Ashfield's collection of domestic stories has not finished unpacking."
+      }
+    ],
+    "slogan": "Many arrivals. A place to stay."
+  },
+  "Auburn": {
+    "title": "A station with a thousand conversations",
+    "intro": "Step through the station with me. On the other side, conversation turns into ribbons, a clock becomes a flower and the cherry trees release pink clouds. Auburn's religious life, food streets and botanic gardens gave me several kinds of gathering. I wanted you to feel how they share the same neighbourhood.",
+    "items": [
+      {
+        "label": "The station as an open gateway.",
+        "text": "The railway is one of Auburn's everyday points of arrival. I enlarged its entrance into the centre of the drawing. Passing through the gates becomes the moment an unfamiliar name on a train map begins to acquire faces."
+      },
+      {
+        "label": "The luggage beside the tracks.",
+        "text": "Auburn has been a place of settlement for successive migrant communities. I left suitcases near the arriving figures, then showed people walking on without them. The story continues beyond arrival, into shopping, friendship and a familiar route home."
+      },
+      {
+        "label": "Gallipoli Mosque and its minarets.",
+        "text": "Auburn Gallipoli Mosque's present building was completed in 1999, largely through community fundraising. I gave it a generous place beside the station. Its scale makes years of shared effort visible in the skyline."
+      },
+      {
+        "label": "The flowering clock.",
+        "text": "I imagined the neighbourhood's different routines as petals around one clock. Commuting, prayer, meals and family visits have their own rhythms. The petals remain distinct, but all turn around the experience of spending a day here."
+      },
+      {
+        "label": "The moon, lantern and loose calendars.",
+        "text": "These objects bring different observances and seasonal celebrations into the air above the street. I let the calendar pages float free because one civic timetable cannot contain every occasion that matters to the people living here."
+      },
+      {
+        "label": "The ribbons of conversation.",
+        "text": "Auburn's many languages suggested a current moving out of the station into the shops. I gave that current colour and shape. The ribbons mingle without becoming one flat shade, carrying words, gestures and the work of understanding each other."
+      },
+      {
+        "label": "The cherry blossom garden.",
+        "text": "The Japanese garden at Auburn Botanic Gardens draws visitors for the annual Cherry Blossom Festival. I lifted its bridge and flowering tree above the shops. A brief seasonal change becomes an event that brings the wider city into the neighbourhood."
+      },
+      {
+        "label": "The produce, tables and small errands.",
+        "text": "The street ends with groceries, a bicycle, a child and people eating together. I wanted your eye to come down from the grand symbols to these ordinary exchanges. A place becomes familiar through repeated, practical reasons to return."
+      }
+    ],
+    "slogan": "Come through. Join the conversation."
+  },
+  "Avalon Beach": {
+    "title": "A little kingdom of the everyday",
+    "intro": "That surfboard in the rock is my Avalon version of a legendary sword. The suburb's name was chosen with King Arthur's island in mind. I brought the legend back to the beach, then gave its small kingdom the things people actually care for: surf, village life, a swimming pool and a little breathing room.",
+    "items": [
+      {
+        "label": "The surfboard in the stone.",
+        "text": "Arthur J. Small chose the name Avalon in 1921, drawing on the legendary resting place of King Arthur. I replaced a sword with a surfboard. The local hero's task becomes knowing this particular piece of ocean."
+      },
+      {
+        "label": "The tiny crown.",
+        "text": "I left the crown floating above the board, slightly comic and still in pencil. It belongs to my invented beach legend. The scene gives everyday coastal rituals the ceremony usually reserved for much grander stories."
+      },
+      {
+        "label": "The ocean and the quieter water.",
+        "text": "Avalon sits on the Barrenjoey Peninsula, with ocean surf to one side and Pittwater nearby on the other. I brought those different waters together around the headland. A short journey can change the whole mood of being outdoors."
+      },
+      {
+        "label": "The rock pool and lifesaving flag.",
+        "text": "Avalon's ocean pool and surf lifesaving traditions offer different ways to enter the water. I placed the calm rectangle beside the breaking waves. The flag adds the human work of care to a landscape often photographed as pure freedom."
+      },
+      {
+        "label": "The great red spotlight being pushed away.",
+        "text": "Plans to bring Baywatch production to Avalon met strong local opposition in 1999. I turned that dispute into people resisting an enormous piece of show-business equipment. A place admired from afar still belongs to people trying to use it."
+      },
+      {
+        "label": "The village screen and seated audience.",
+        "text": "Avalon has a long cinema history. I made a modest screen among the houses, close to the ground and its audience. Beside the giant spotlight, this smaller scene lets entertainment remain something neighbours share."
+      },
+      {
+        "label": "The people tending their surroundings.",
+        "text": "The bushland preserved at Angophora Reserve reflects a history of local conservation. I gave people brushes, tools and small tasks around the board. Looking after a place can be as much a part of belonging as enjoying its view."
+      },
+      {
+        "label": "The bus on a winding blue line.",
+        "text": "Bus journeys connect the northern peninsula with the rest of Sydney. I let the route curl around the composition like a loose thread. Even this imaginary little kingdom depends on everyday connections beyond its own beach."
+      }
+    ],
+    "slogan": "A little kingdom, shared with the sea."
+  },
+  "Badgerys Creek": {
+    "title": "A map learning how to fly",
+    "intro": "Look at the paper plane before you look at the jet. Its folds still carry an older map, with houses, a church and traces of a rural community. Badgerys Creek's transformation around Western Sydney International Airport gave me this meeting of scales: a place people have lived in becoming a gateway through which the world will travel.",
+    "items": [
+      {
+        "label": "The enormous plane folded from a map.",
+        "text": "I used the old map as the material of the new aircraft. The airport occupies a landscape with a history of settlement and farming. Its future is literally folded out of that earlier ground, rather than placed on an empty sheet."
+      },
+      {
+        "label": "The homes and little village buildings.",
+        "text": "The houses and church stand for the rural community that preceded the airport development. I kept them visible along the folds. A line on a major infrastructure plan can pass through a place someone remembers in much smaller detail."
+      },
+      {
+        "label": "The aviator with the drawing compass.",
+        "text": "The airport is named after Nancy-Bird Walton, whose pioneering flying included work for the Far West Health Scheme in the 1930s. I gave the aviator a compass and a seat on the map: flight becomes a way of connecting human lives."
+      },
+      {
+        "label": "The runway crossing the paper.",
+        "text": "Western Sydney International is preparing to welcome passenger flights on 25 October 2026. I drew the runway as a decisive dark line through the older surface. An immense new route changes what this ground connects to."
+      },
+      {
+        "label": "The sun and moon on one arc.",
+        "text": "The new airport is designed for operations around the clock. I joined day and night in a single ring above the runway. For travellers that means possibility; for the surrounding landscape it introduces a different rhythm."
+      },
+      {
+        "label": "The small control tower.",
+        "text": "My tower is a visual shorthand for air-traffic control. The real airport uses a digital system, with cameras sending views to a remote control room. That difference interested me: even the familiar picture of an airport is changing."
+      },
+      {
+        "label": "The train, containers and unfinished city.",
+        "text": "The airport's metro connection and surrounding employment precincts extend the project far beyond the terminal. I left much of that city in pencil, distinguishing the unfolding plan from the lived place it is intended to become."
+      },
+      {
+        "label": "The blue creek threading beneath it all.",
+        "text": "Badgerys Creek remains a watercourse as well as a name associated with aviation. I let the water run across the older map and the new plan. The landscape has connections of its own, continuing beneath the routes we draw above it."
+      }
+    ],
+    "slogan": "An old landscape. A new horizon."
+  },
+  "Balmain East": {
+    "title": "A comma at the end of the street",
+    "intro": "Come a little further down the peninsula with me. The houses grow quieter, the street reaches the water, and suddenly the city is across the harbour. I drew Balmain East as a comma: a small, inhabited pause in Sydney's long sentence.",
+    "items": [
+      {
+        "label": "The street curling into a comma.",
+        "text": "The peninsula ends here, although the journey can continue by ferry. I let the street turn back on itself around a pocket of green. The curl gives you somewhere to stop before another crossing."
+      },
+      {
+        "label": "The row of old façades.",
+        "text": "Balmain East was among the early settled parts of the Balmain peninsula. I kept its modest houses close together, with individual doors and windows. Their small differences make the street feel like a collection of neighbours."
+      },
+      {
+        "label": "Illoura Reserve inside the curve.",
+        "text": "Parts of this waterfront were once occupied by industry, including timber yards. I placed the reserve within the punctuation mark: a working edge of the harbour opened into a place for an afternoon."
+      },
+      {
+        "label": "The sandstone terraces.",
+        "text": "Landscape architect Bruce Mackenzie shaped Illoura Reserve around sandstone and native planting. I drew the retaining walls in clear, weighty blocks. Here the park follows the character of the ground instead of covering it with a smooth green disguise."
+      },
+      {
+        "label": "The trees, bench and swings.",
+        "text": "I tucked everyday recreation beneath the canopy. A public waterfront matters through these small uses: a child insisting on one more push, two people finishing a conversation, someone sitting alone without needing to buy anything."
+      },
+      {
+        "label": "The weathered boatshed.",
+        "text": "Its timber legs keep the water's working history in the foreground. I made it small and slightly precarious beside the generous park. The harbour can be beautiful and still remember ropes, repairs and wet planks."
+      },
+      {
+        "label": "The ferry leaving the point.",
+        "text": "Balmain East's wharf turns the apparent end of the road into another beginning. I gave the ferry a curved wake so that your eye can leave the comma and continue towards the city."
+      },
+      {
+        "label": "The pale skyline across the water.",
+        "text": "Sydney's towers remain close enough to recognise but faint enough to release their hold on the picture. I wanted you to feel that peculiar local luxury: stepping out of the city's urgency while keeping it in sight."
+      }
+    ],
+    "slogan": "Stay for the pause."
+  },
+  "Bankstown": {
+    "title": "Taking the neighbourhood's pulse",
+    "intro": "Walk with me between the shops and the construction fences. Bankstown is changing its transport, skyline and medical infrastructure while people still need to get to work and buy dinner. I drew a stethoscope around the neighbourhood to ask a practical question: how does all this change feel to the people living through it?",
+    "items": [
+      {
+        "label": "The two halves and their brass hinge.",
+        "text": "I opened the suburb into two connected chambers: established streets on one side, a taller emerging centre on the other. The hinge makes change a relationship. What comes next must remain attached to the lives already here."
+      },
+      {
+        "label": "The food shops and busy pavements.",
+        "text": "Bankstown's Vietnamese and Lebanese food cultures are among the ways newcomers first get to know it. I gathered small storefronts around people, groceries and tables. Follow your appetite and the large suburb becomes a sequence of personal discoveries."
+      },
+      {
+        "label": "The old train and the blue metro.",
+        "text": "The Sydenham–Bankstown railway closed for conversion in September 2024. Metro passenger services are planned for the second half of 2026. I drew the two trains together to make that unfinished handover visible."
+      },
+      {
+        "label": "The replacement buses and barriers.",
+        "text": "During the conversion, Southwest Link buses carry passengers along the affected corridor. I kept them in the foreground. Infrastructure has a waiting room, and for commuters that waiting room is part of daily life."
+      },
+      {
+        "label": "The rising buildings.",
+        "text": "Western Sydney University's Bankstown City campus opened in 2023, adding education to the centre's changing skyline. I stretched the newer architecture upwards, while leaving some outlines unfinished. The drawing holds completed changes and ambitions still taking shape."
+      },
+      {
+        "label": "The stethoscope.",
+        "text": "A new Bankstown Hospital is planned for the former TAFE site on Chapel Road. I enlarged the instrument until it could listen to a whole neighbourhood. Care becomes both a building project and a way of paying attention."
+      },
+      {
+        "label": "The red pulse through the streets.",
+        "text": "The line passes shops, houses and towers without losing its colour. I wanted change to be measured against continuity: familiar businesses, family routines and the people who keep the centre alive through disruption."
+      },
+      {
+        "label": "The community information stand.",
+        "text": "Someone pauses to talk beside the construction. I put that exchange where you can see it. A future drawn in architectural lines becomes more meaningful when the people waiting for it can ask questions."
+      }
+    ],
+    "slogan": "A changing city. A living pulse."
+  },
+  "Bellevue Hill": {
+    "title": "The view at the top of the stairs",
+    "intro": "Would you like to climb a little? Bellevue Hill's name promises a beautiful view, but its history also leads through large estates, inherited wealth and houses that became schools. I drew a staircase carrying those stories uphill, with a ribbon changing colour as it rises towards the harbour.",
+    "items": [
+      {
+        "label": "The enormous sandstone staircase.",
+        "text": "The suburb's slopes gave me the structure of the picture. I exaggerated the climb so that height could mean several things at once: topography, aspiration and the effort of reaching an elevated address."
+      },
+      {
+        "label": "The decanter at its foot.",
+        "text": "The Cooper family's wealth helped shape the estate from which much of Bellevue Hill developed. I used a decanter as an imagined vessel for accumulated prosperity. Its contents flow into buildings, showing money becoming a physical landscape."
+      },
+      {
+        "label": "The red ribbon turning gold and blue.",
+        "text": "I let the liquid become a route up the stairs. Red suggests appetite, gold the display of wealth, and blue the view that gives the climb its destination. These colours are my interpretation, rather than a historical code."
+      },
+      {
+        "label": "The grand houses on separate landings.",
+        "text": "Bellevue Hill retains mansions such as Caerleon and Rona among the remains of its great estates. I placed different architectural silhouettes on individual terraces. Each landing feels like a chapter in a family's idea of permanence."
+      },
+      {
+        "label": "The school buildings and playing fields.",
+        "text": "Cranbrook and The Scots College occupy a large place in the suburb's everyday life. I gave their grounds room beside the houses, bringing running, learning and school-day routines into an image otherwise dominated by grand façades."
+      },
+      {
+        "label": "The floating bell, desk and book.",
+        "text": "Cranbrook House served as a governor's residence before its school life; the Fairfax family's Ginahgulla became part of Scots. I brought classroom objects out into the air. Buildings made for private households acquire generations of other people's memories."
+      },
+      {
+        "label": "The little bus on the curved road.",
+        "text": "The bus restores the scale of an ordinary journey. I wanted someone heading to school or work to remain visible among the impressive addresses. However grand the staircase becomes, people still have to get up the hill."
+      },
+      {
+        "label": "The loose sheet of harbour.",
+        "text": "I detached the panorama from the land, almost like a picture someone might frame. It is the reward held above the whole composition: water, light and distant sails, which no amount of stone can keep still."
+      }
+    ],
+    "slogan": "Climb for the view. Stay for the stories."
+  },
+  "Berowra Waters": {
+    "title": "The thread across the water",
+    "intro": "Here, let the road slow you down. Berowra Waters lies along a deep creek valley, with bush, sandstone and homes reached from the water. I imagined its two banks as pieces of rough cloth, held together by a red thread. The connection is small; the landscape around it is immense.",
+    "items": [
+      {
+        "label": "The two pieces of landscape cloth.",
+        "text": "I gave the valley frayed edges to make the bush feel resistant to a neat suburban outline. Roads and houses occupy folds in a much larger terrain. The creek decides where the pieces can meet."
+      },
+      {
+        "label": "The giant needle and red thread.",
+        "text": "The needle is my image of the work required to connect people across water. I left the stitching visible. A crossing that looks effortless from a map depends on something real holding it together."
+      },
+      {
+        "label": "The ferry carrying three cars.",
+        "text": "Berowra Waters has a cable ferry across Berowra Creek. In my drawing it hangs from the thread like a small travelling stitch; the real vessel floats on the water. I wanted the mechanism of connection to become unmistakable."
+      },
+      {
+        "label": "The roads twisting down the banks.",
+        "text": "The approach winds through steep bushland before reaching the crossing. I made the bends narrow and deliberate. Your arrival becomes a gradual change of pace, from the larger road network to the valley's own geography."
+      },
+      {
+        "label": "The houses and their jetties.",
+        "text": "Some homes here rely on access by water. I placed small landing stages at the foot of the buildings, so that the creek becomes their front street. A boat trip can be the final, familiar part of coming home."
+      },
+      {
+        "label": "The low pavilion beside the creek.",
+        "text": "Berowra Waters Inn was transformed by Glenn Murcutt using sandstone, glass and corrugated roofing. Guests arrive by boat. I kept the building low against the bush: architecture making room for the setting that gives the visit its character."
+      },
+      {
+        "label": "The marked sandstone and shells.",
+        "text": "The wider valley has a long Aboriginal history. I placed traces of human presence into the rock, while keeping these drawn marks as an artistic gesture rather than a reproduction of a particular site. The story reaches far beyond the ferry road."
+      },
+      {
+        "label": "The old telephone on the rock.",
+        "text": "I gave the landscape a domestic object that asks for another person at the other end. It is a metaphor for staying in touch across separation. Under the vast canopy, that small human wish still has a clear voice."
+      }
+    ],
+    "slogan": "A small crossing into another rhythm."
+  },
+  "Birchgrove": {
+    "title": "A park poured out of a fuel tank",
+    "intro": "Look at the rusty cylinder on the left. I wanted Birchgrove's green waterfront to unfold from the industrial structure that once kept people away from it. Ballast Point's transformation from fuel depot to public park gave me a very literal image: a closed container opening into shared ground.",
+    "items": [
+      {
+        "label": "The enormous split tank.",
+        "text": "Caltex used Ballast Point for fuel storage and distribution. I enlarged a tank and peeled it open. The heavy shell makes the old use tangible, so that the park's arrival feels like a physical release."
+      },
+      {
+        "label": "The neighbours turning the valve.",
+        "text": "Campaigners worked for years to secure public access to the site. I gathered several people around one red wheel. The park appears through a collective action: different hands finding a way to open the same stubborn mechanism."
+      },
+      {
+        "label": "The strip of green unrolling towards the harbour.",
+        "text": "Ballast Point Park opened in 2009. I made its ground extend like a sheet of metal becoming landscape. The transformation changes what the waterfront is for while keeping its industrial material in view."
+      },
+      {
+        "label": "The pipes, rivets and upright fragments.",
+        "text": "The real park incorporates industrial history through retained traces and interpretation, including Tank 101. I left machinery standing among the plants. You can enjoy the new space without pretending it has always been a garden."
+      },
+      {
+        "label": "The sandstone and native planting.",
+        "text": "Sandstone from the point once provided ballast for ships. I set warm rock against dark metal and allowed vegetation to gather between them. The land's older substance becomes visible beneath its more recent machinery."
+      },
+      {
+        "label": "The players on the lawn.",
+        "text": "Nearby Birchgrove Oval hosted games in rugby league's first premiership round in 1908. I brought a small game into the wider green composition. Public ground carries sporting memories as well as industrial ones."
+      },
+      {
+        "label": "The houses above the grass.",
+        "text": "The terrace façades restore the residential neighbourhood around these remarkable sites. I kept the doors and verandahs small: after the historic match or the waterfront walk, someone still takes the short route home."
+      },
+      {
+        "label": "The ferry and Cockatoo Island.",
+        "text": "Across the water sits another place shaped by shipbuilding and industry. I linked it to Birchgrove with a blue sweep and a ferry. The park belongs to a larger working harbour whose former workplaces are acquiring new lives."
+      }
+    ],
+    "slogan": "Open the past. Let life in."
+  },
+  "Blacktown": {
+    "title": "A living story written on bark",
+    "intro": "I'd like you to follow the red line through this picture. It crosses bushland, a dark historical fold and a busy present full of arrivals and gatherings. I drew Blacktown on a long piece of bark because the ground and its people hold a history much deeper than a suburban boundary.",
+    "items": [
+      {
+        "label": "The bark opening across the page.",
+        "text": "I made the land itself the surface of the story. Its rough edges resist the clean rectangular shape of a development plan. The contemporary centre sits on a place with its own continuing history."
+      },
+      {
+        "label": "The bushland and people at the beginning.",
+        "text": "Blacktown is on Dharug Country. I gave this part of the drawing space, movement and human presence. Aboriginal life belongs within the whole composition, rather than being reduced to a decorative border around a newer city."
+      },
+      {
+        "label": "The dark fold and institutional building.",
+        "text": "The Blacktown Native Institution operated from 1823 to 1829 and separated Aboriginal and Māori children from family and culture. I placed this history in a sombre fold. It must remain visible within a welcoming portrait of the city."
+      },
+      {
+        "label": "The old steam train.",
+        "text": "The railway reached Blacktown in 1860 and helped determine its growth. I drew the train within the historical section, then carried its direction into the modern interchange. A transport connection gradually becomes a centre of everyday life."
+      },
+      {
+        "label": "The red thread that never disappears.",
+        "text": "I continued the line through every change in colour and period. It is my device for continuity, especially the enduring connection of Dharug people to Country. The past is not sealed off when the picture becomes bright."
+      },
+      {
+        "label": "The modern station and hospital.",
+        "text": "Blacktown's centre gathers transport, health services, work and study. I placed large public buildings behind the arriving figures. Their importance comes from the many practical journeys they bring into the same streets."
+      },
+      {
+        "label": "The different places of worship.",
+        "text": "The church, mosque, temple and gurdwara bring the wider Blacktown area's religious diversity into one imagined gathering. They are a compressed portrait of community life, rather than a claim that these buildings stand together on one square."
+      },
+      {
+        "label": "The stalls, conversations and coloured pieces in the air.",
+        "text": "Blacktown grew substantially through post-war settlement and migration. I ended with people sharing food, meeting and celebrating. The loose colours suggest many contributions still arriving, with enough white space for the story to continue."
+      }
+    ],
+    "slogan": "Many lives. Deep roots. Room to belong."
+  },
+  "Bondi": {
+    "title": "The neighbourhood hanging out its washing",
+    "intro": "Before we get to the beach, come along Bondi Road with me. There are groceries to carry, keys to find and someone watering a balcony plant. I strung Bondi's buildings on a washing line between the Junction and the ocean, letting ordinary domestic life take up the middle of the picture.",
+    "items": [
+      {
+        "label": "The long washing line.",
+        "text": "Bondi occupies the residential ground between the busy Junction and the famous beachfront. I made the line connect those two magnets while giving the neighbourhood in between its own presence. This is where a destination becomes home."
+      },
+      {
+        "label": "The buildings held by wooden pegs.",
+        "text": "Bondi Road has Victorian and Federation shopfronts and houses among later buildings. I hung them individually, like garments with different histories. Their varied shapes give the street a character that no single landmark could supply."
+      },
+      {
+        "label": "The striped shirt and checked towel.",
+        "text": "These are the everyday companions of coastal living. I gave them the same scale as the buildings, allowing personal habits to become architecture. A suburb's identity can be hanging outside somebody's window."
+      },
+      {
+        "label": "The plants on balconies and in the hanging pot.",
+        "text": "The small gardens bring care into a dense residential street. I drew someone reaching up to tend a plant, making the gesture visible from a distance. The neighbourhood is maintained through acts this modest."
+      },
+      {
+        "label": "The church and the older civic building.",
+        "text": "Bondi Road's churches and community buildings record a suburb with institutions of its own. I placed them among the washing and front doors. Ceremonies, meetings and errands belong to the same lived street."
+      },
+      {
+        "label": "The oversized keys and bicycles.",
+        "text": "Keys suggest the private pleasure of having a place here; bicycles suggest the practical business of moving through it. I hung both from the line, as if the neighbourhood had emptied its pockets into the sea breeze."
+      },
+      {
+        "label": "The bus above the disappearing tram.",
+        "text": "Bondi Road once carried trams towards the beach. I left the tram as a fading pencil memory beneath today's road and bus. One generation's familiar journey becomes the faint track under another's routine."
+      },
+      {
+        "label": "The railway at one end and the wave at the other.",
+        "text": "Trains terminate at Bondi Junction; the journey to the beach continues beyond them. I separated station and surf with a full street of people. On the way to the famous view, there is a whole neighbourhood worth noticing."
+      }
+    ],
+    "slogan": "Home, between the station and the sea."
+  },
+  "Bondi Junction": {
+    "title": "The city in a revolving door",
+    "intro": "Which way are you heading? At Bondi Junction, a short walk can connect a train, a bus, a shopping trip and the next journey to the coast. I drew those changes of direction as a huge revolving door, with a different part of the neighbourhood inside each glass panel.",
+    "items": [
+      {
+        "label": "The revolving door.",
+        "text": "The suburb grew around the meeting of tram routes and remains a major interchange. I turned that identity into a moving object. Every panel carries a destination, but the centre is the moment you decide where to go next."
+      },
+      {
+        "label": "The train beneath the street.",
+        "text": "The Eastern Suburbs Railway opened to Bondi Junction in 1979. I cut away the ground so that the platform could stand beside the street scenes. Much of the neighbourhood's movement happens below the visible city."
+      },
+      {
+        "label": "The buses on the upper panel.",
+        "text": "The bus interchange connects the railway with surrounding suburbs and beaches. I placed it in a separate wing of the door. Changing vehicles becomes a small turn that opens a much larger piece of Sydney."
+      },
+      {
+        "label": "The distant strip of ocean.",
+        "text": "The coast sits beyond the departing bus, deliberately small. I wanted the beach to remain a possibility on the horizon while the Junction keeps its own scale, activity and reasons to stay."
+      },
+      {
+        "label": "The shops and striped awnings.",
+        "text": "Bondi Junction's commercial life grew alongside its transport role. I opened the shopping street like a room, showing both errands and café tables. Some journeys end here with something as ordinary as lunch."
+      },
+      {
+        "label": "The towers beside the approach.",
+        "text": "Offices and apartments make the Junction a place of work and residence as well as transfer. I let the tall buildings rise above the rotating panels, holding the more permanent lives around the passing crowd."
+      },
+      {
+        "label": "The older brick building and layered map.",
+        "text": "I tucked older architecture and scraps of mapping behind the glass. They recall the roads, tramways and commercial buildings that preceded the current centre. Today's interchange occupies routes that have been redrawn repeatedly."
+      },
+      {
+        "label": "The arrows and people moving at different speeds.",
+        "text": "Someone waits, someone pushes a pram, someone is already on the next pavement. I gave them distinct pauses and directions. The great mechanical door only becomes a place when you can recognise your own pace inside it."
+      }
+    ],
+    "slogan": "Your next direction starts here."
+  },
+  "Breakfast Point": {
+    "title": "What lies beneath the silver cover",
+    "intro": "Let me lift the lid for you. Breakfast Point's pale buildings and clipped lawns stand on the former Mortlake gasworks site. I drew the neighbourhood on a serving plate, with a dark industrial world beneath it. The polished presentation has a history you cannot see from the table.",
+    "items": [
+      {
+        "label": "The great silver cloche.",
+        "text": "The suburb's name suggested the playful beginning: breakfast arriving beneath a cover. I made the lid large enough to conceal an entire neighbourhood, then raised it so that you could look beyond the carefully composed first impression."
+      },
+      {
+        "label": "The curved row of pale apartments.",
+        "text": "The former AGL site was redeveloped into a planned residential neighbourhood. I brought its coordinated façades together in a crescent. The buildings read as a deliberate ensemble, like the pieces of a carefully arranged table setting."
+      },
+      {
+        "label": "The green at the centre.",
+        "text": "I left a generous lawn between the apartments, with figures walking and playing. A masterplan only becomes lived space through repeated uses. The little people begin to give this formally arranged landscape their own routines."
+      },
+      {
+        "label": "The pavilion and its verandahs.",
+        "text": "Breakfast Point's community facilities contribute to its village-like composition. I placed a welcoming, low building against the apartment crescent. Its verandah provides an intermediate scale between a private front door and the whole neighbourhood."
+      },
+      {
+        "label": "The white rim used as a footpath.",
+        "text": "I turned the edge of the plate into a waterfront walk. People can move around the composition rather than merely look at it. The river becomes something encountered at walking speed."
+      },
+      {
+        "label": "The cutaway gasworks.",
+        "text": "Mortlake's gasworks produced gas from coal from the late nineteenth century. I exposed pipes, brick buildings and a gas holder below the lawn. This is an imaginative historical cross-section, not a claim that an intact factory remains underground."
+      },
+      {
+        "label": "The collier at the lower left.",
+        "text": "Coal arrived by river on vessels known as sixty-milers, travelling from Newcastle. I kept the old ship in monochrome beside the dark works. The same water that now frames a pleasant walk once supplied an energy-hungry city."
+      },
+      {
+        "label": "The sailboat beyond the plate.",
+        "text": "The river continues beyond every planned edge. I placed a small sail in the open blue to give the composition some breathing room. Once the lid is raised, the picture belongs to a larger and less controllable landscape."
+      }
+    ],
+    "slogan": "A new morning with a long memory."
+  },
+  "Bronte": {
+    "title": "One stroke, passed from swimmer to swimmer",
+    "intro": "Take a breath with me before the first stroke. Bronte's ocean pool brings sporting history into the scale of a daily swim. I drew an enormous swimmer emerging from the baths, followed by a line of smaller swimmers and arcs of water. A local habit becomes something handed through time.",
+    "items": [
+      {
+        "label": "The ocean pool in the foreground.",
+        "text": "Bronte Baths were built in 1887. I made the pool broad and substantial, resting directly in the sandstone. Its walls give a repeated human routine a place beside the ocean's much less predictable movement."
+      },
+      {
+        "label": "The giant swimmer in monochrome.",
+        "text": "Bronte's swimming history includes the women's club founded in 1916 by Annie Brown and Olympic champion Fanny Durack. I used an old-fashioned swimmer as a figure of that sporting inheritance, rather than presenting the drawing as a literal portrait."
+      },
+      {
+        "label": "The procession of smaller swimmers.",
+        "text": "I let the figures continue out towards the horizon. They suggest generations learning, training and returning to the water. The first swimmer's oversized gesture becomes a movement that others can take up for themselves."
+      },
+      {
+        "label": "The blue arcs above every stroke.",
+        "text": "The arches turn a repeated arm movement into the structure of the picture. I wanted you to be able to follow its rhythm with your eye: reach, pull, breathe, and begin again."
+      },
+      {
+        "label": "The smaller rock pool beside the baths.",
+        "text": "Bronte also has a natural rock pool known as the Bogey Hole. I kept a more irregular pocket of water beside the formal rectangle. The shoreline offers different scales of encounter with the sea."
+      },
+      {
+        "label": "The surf club and boards.",
+        "text": "Bronte's lifesaving culture belongs beside its swimming history. I put the club close to the sand with boards waiting outside. The pleasure of this coast is supported by people who watch, train and help others."
+      },
+      {
+        "label": "The park, picnics and tall pines.",
+        "text": "The green valley gives beach life somewhere to spread out. I gathered blankets, walkers and resting figures beneath the trees. Even if you never enter the water, there is a place for your afternoon in the drawing."
+      },
+      {
+        "label": "The old house above the valley.",
+        "text": "Bronte House was completed in 1845, with gardens closely associated with Georgiana Lowe. I kept the historical residence within the green slope. The beach's public present sits beside an earlier idea of a secluded coastal retreat."
+      }
+    ],
+    "slogan": "Find your rhythm between the strokes."
+  },
+  "Burwood": {
+    "title": "A whole neighbourhood inside a lantern",
+    "intro": "Come closer; there is much more inside this lantern than you can see at first. Burwood's food streets, railway and crowded evenings suggested a light filled with human activity. I opened its red shell to show meals, homes and a green centre, then left its top unfinished for the next change.",
+    "items": [
+      {
+        "label": "The giant red lantern.",
+        "text": "Burwood's Chinatown and Lunar New Year celebrations made the lantern a fitting starting point. I enlarged it into a neighbourhood-sized room. Its warmth comes from the many small scenes gathered inside."
+      },
+      {
+        "label": "The restaurants stacked in the shell.",
+        "text": "Burwood Chinatown brings together eateries and a night market. I opened walls and piled dining rooms above one another. You can follow one meal into another, as though the lantern were lit by conversations around tables."
+      },
+      {
+        "label": "The station carrying the lantern.",
+        "text": "The railway brings people directly into Burwood's centre. I made the tracks support the whole composition. The evening's apparent spontaneity rests on a practical connection: people can arrive from many other parts of Sydney."
+      },
+      {
+        "label": "The green park at the heart.",
+        "text": "Burwood Park sits close to the commercial centre. I moved it inside the lantern, leaving an open place among all the rooms. The neighbourhood needs somewhere you can pause without ordering, purchasing or moving on."
+      },
+      {
+        "label": "The statue in the gathering.",
+        "text": "Burwood Park has a Confucius statue, unveiled in 2007. I included a standing figure among the trees as a link between the area's Chinese cultural life and its civic landscape. History and celebration share the same green space."
+      },
+      {
+        "label": "The older houses on either side.",
+        "text": "The residential streets hold Victorian and Federation houses beyond the busiest shopping strips. I set their verandahs outside the lantern. A short walk changes the scale from a crowded public evening to somebody's front garden."
+      },
+      {
+        "label": "The apartment windows above the shops.",
+        "text": "People live above and around this activity. I opened a few windows to keep their presence in view. The neighbourhood's nightlife is also the sound and light outside someone's home."
+      },
+      {
+        "label": "The uncoloured framework rising from the top.",
+        "text": "Burwood's skyline continues to change. I left the upper structure in pencil so that growth remains a question within the picture. How much more can the lantern hold while keeping its green heart and individual rooms visible?"
+      }
+    ],
+    "slogan": "Follow the light. Bring your appetite."
+  },
+  "Cabarita": {
+    "title": "A nation's pavilion putting down roots",
+    "intro": "You might come to Cabarita for a picnic and walk past a piece of Australia's Federation story. The timber frame of the ceremonial pavilion from 1901 was moved here in 1903. I gave it enormous roots, letting a national occasion settle into the much more intimate life of a neighbourhood park.",
+    "items": [
+      {
+        "label": "The pavilion at the top of the hill.",
+        "text": "The original structure was used for the swearing-in of Australia's first federal government in Centennial Park on 1 January 1901. I placed its surviving framework above the scene, giving this modest park building its historical weight."
+      },
+      {
+        "label": "The archival gathering beneath the roof.",
+        "text": "I brought the formal group into the pavilion like a large old photograph. The monochrome figures mark a public ceremony from another period, still present behind today's smaller and less official gatherings."
+      },
+      {
+        "label": "The columns becoming tree roots.",
+        "text": "The pavilion moved to Cabarita Park in 1903 after its original decorative covering deteriorated. I made its supports grow into the ground. A temporary ceremonial structure finds a lasting home through the ordinary care of another place."
+      },
+      {
+        "label": "The old picnic party on the left.",
+        "text": "Cabarita has a long history of harbour excursions and recreation. I placed a Victorian gathering beneath the roots. Their clothing differs from today's, but the wish to sit together near the water is immediately recognisable."
+      },
+      {
+        "label": "The steamer and the modern ferry.",
+        "text": "I set two kinds of arrival at opposite ends of the shore. The old vessel carries the memory of excursions; the newer one brings the waterfront into present-day journeys. The river keeps delivering company."
+      },
+      {
+        "label": "The contemporary picnic blankets and benches.",
+        "text": "I repeated the older gathering in colour. People share food, rest and talk beneath the same broad canopy. This is how I wanted the pavilion's roots to work: joining public history to personal memories."
+      },
+      {
+        "label": "The swimming centre and river's edge.",
+        "text": "Cabarita has both its swimming centre and a river beach. I kept their different shapes visible, a measured pool beside the open shore. Recreation gives people another reason to return to this piece of the harbour."
+      },
+      {
+        "label": "The playground and growing trees.",
+        "text": "The park continues to be discussed and planned for by its community. I gave its youngest visitors a prominent place among the roots. The next generation's memories are already beginning under a very old roof."
+      }
+    ],
+    "slogan": "Big history. A place on the picnic rug."
+  },
+  "Cammeray": {
+    "title": "Giving the neighbourhood room to breathe",
+    "intro": "Stand here with me between the green slopes and the construction site. Cammeray's parks and bushland now sit beside the enormous work of building the Western Harbour Tunnel. I drew the neighbourhood as a pair of lungs, with paths branching through them. The question is how a growing city keeps breathing at the scale of a local street.",
+    "items": [
+      {
+        "label": "The two green lobes.",
+        "text": "I shaped the suburb's open spaces like lungs, with houses resting along their upper edges. The image makes greenery feel necessary to everyday life: somewhere to walk, play, find shade and put a little distance between yourself and traffic."
+      },
+      {
+        "label": "The tunnel opened beneath the left side.",
+        "text": "The Western Harbour Tunnel connects to the Warringah Freeway at Cammeray. I cut through the ground to reveal the scale of the work below. A regional transport project becomes part of the neighbourhood's physical body."
+      },
+      {
+        "label": "The machinery inside the fenced compound.",
+        "text": "Land near Cammeray Golf Course has been used for construction. I kept the hard surfaces, containers and vehicles visible within the green outline. Temporary occupation is still a real experience for the people living beside it."
+      },
+      {
+        "label": "The branching paths.",
+        "text": "Paths run through both sides and meet around the centre. I treated them as routes for ordinary circulation: walkers, neighbours and people reaching open space. Their fine scale matters beside the much larger engineering."
+      },
+      {
+        "label": "The concrete shaft becoming a tree.",
+        "text": "I made the central structure change from infrastructure into living branches. This is my imagined transformation, rather than an engineering proposal. It gives visible form to the hope that construction can eventually return something generous to the neighbourhood."
+      },
+      {
+        "label": "The golf greens and bushy slopes.",
+        "text": "Cammeray's recreation grounds sit close to the steep landscape falling towards Middle Harbour. I drew the greens as small clearings in a larger canopy. Organised sport and less formal encounters with nature occupy adjoining parts of daily life."
+      },
+      {
+        "label": "The suspended towers.",
+        "text": "I left tall buildings hanging beyond the hillside, as possibilities rather than a completed skyline. Their uneasy suspension introduces the pressure of metropolitan growth. From this viewpoint, future development is a question about what the green lungs can accommodate."
+      },
+      {
+        "label": "The people planting along the foreground.",
+        "text": "Draft plans released in September 2026 propose new Cammeray Parklands after tunnel construction. I put planting and care at the front of the drawing. Returning open space is a process that people will have to see through, tree by tree."
+      }
+    ],
+    "slogan": "Make room for the next breath."
+  },
+  "Canada Bay": {
+    "title": "The broken link that became a shoreline",
+    "intro": "Have you ever wondered why this quiet Sydney bay carries Canada's name? In 1840, 58 French Canadian political prisoners arrived in New South Wales after the rebellions in Lower Canada. Their story led me to draw a broken chain link, with a present-day waterfront growing inside it.",
+    "items": [
+      {
+        "label": "The enormous iron link.",
+        "text": "The exiles were held at Longbottom Stockade, near today's Concord Oval. I made confinement the frame of the composition. The place name carries a journey that began far from this peaceful stretch of water."
+      },
+      {
+        "label": "The sailing ship at the left.",
+        "text": "I placed the transport at a distance from the shore. It brings the scale of forced separation into the picture: an ocean crossed without the freedom to choose a destination, leaving familiar lives on the other side."
+      },
+      {
+        "label": "The line of men carrying their belongings.",
+        "text": "The small bundles give the historical figures something personal to hold. I wanted you to see individual people within the group of 58. A number in a history book contains many private accounts of departure."
+      },
+      {
+        "label": "The workers inside the lower curve.",
+        "text": "The prisoners laboured in the Longbottom area, including road work. I set their tools against the iron. The landscape remembered in the suburb's name was also changed through their physical work."
+      },
+      {
+        "label": "The sandstone attached to the chain.",
+        "text": "I joined rough stone to metal so that the restraint could become part of the built environment. It is my way of connecting a political history with the roads and structures that everyday life gradually takes for granted."
+      },
+      {
+        "label": "The break opening into a footpath.",
+        "text": "Most of the exiles eventually returned to Canada after pardons; Joseph Marceau stayed and made a life near Dapto. I broke the link towards the modern path, allowing different futures to emerge from the same confinement."
+      },
+      {
+        "label": "The memorial beside the water.",
+        "text": "A Canadian Exiles monument stands at Bayview Park. I placed a small memorial between the historical frame and the contemporary walkers. It gives a quiet afternoon a point at which to pause and remember."
+      },
+      {
+        "label": "The houses, boats and people walking freely.",
+        "text": "The centre is deliberately ordinary: a pram, dogs, a bicycle and water beyond the trees. I wanted freedom to appear in these unremarkable movements. The broken link holds a place where people can choose their own way."
+      }
+    ],
+    "slogan": "A distant journey. A remembered shore."
+  },
+  "Castle Cove": {
+    "title": "The key to a place among the trees",
+    "intro": "Here is a key with an unusual set of teeth: each one holds a house among the trees. Castle Cove's sandstone castle, bushland reserves and secluded streets suggested the idea of access. I wanted to ask what we unlock when we find a home here, and what needs to remain protected around it.",
+    "items": [
+      {
+        "label": "The great golden key.",
+        "text": "I made the suburb into something held in a hand, linking the private act of opening a front door with the larger landscape it gives access to. The key's weight suggests both opportunity and responsibility."
+      },
+      {
+        "label": "Innisfallen Castle on the ridge.",
+        "text": "Henry Hastings Willis had this castellated home built from sandstone quarried on the site; its foundation stone was laid in 1904. I placed it above the key's ring, turning the building that gave Castle Cove its name into a literal crown."
+      },
+      {
+        "label": "The exposed sandstone below the castle.",
+        "text": "Stone appears as both cliff and building material. I kept those forms close together so you can see the house as an elaborate rearrangement of the ground beneath it. The fantasy rests on a very local substance."
+      },
+      {
+        "label": "The golf course inside the ring.",
+        "text": "Castle Cove's golf course creates a broad green opening among the houses and bush. I enclosed it within the key's head, giving this shared landscape the prominence usually reserved for an impressive private home."
+      },
+      {
+        "label": "The building plan unrolled on the grass.",
+        "text": "The golf course's management plan has been reconsidered following a proposal from Castle Cove Country Club. I left the central building on paper, surrounded by people. It represents a proposal being examined, rather than a development already built."
+      },
+      {
+        "label": "The houses suspended in the teeth.",
+        "text": "Each house occupies its own small wooded pocket. I repeated the form while varying roofs and façades. A neighbourhood is made of private addresses, yet the canopy connects them into something larger than their individual boundaries."
+      },
+      {
+        "label": "The wildlife and winding paths.",
+        "text": "Castle Cove's reserves connect areas of bushland around the peninsula. I enlarged the animals to keep their presence legible beside the houses. The key opens onto an inhabited landscape in which human neighbours are only part of the population."
+      },
+      {
+        "label": "The old magazines below the key.",
+        "text": "Nearby Bantry Bay stored explosives, and Castle Cove's Explosives Reserve began as a protective buffer. I placed the old storage buildings beyond the ring. An industrial restriction helped leave room for bushland that now has a very different value."
+      }
+    ],
+    "slogan": "A key to home, a duty to the trees."
+  },
+  "Castlecrag": {
+    "title": "A neighbourhood following the contours",
+    "intro": "Let's take the winding way. Walter Burley Griffin and Marion Mahony Griffin imagined Castlecrag as a community fitted to its landscape, with low houses, shared reserves and connected paths. I drew it as a great set of curved contours, gathering around an outdoor theatre. The landscape provides the rhythm; the buildings join in.",
+    "items": [
+      {
+        "label": "The rings that follow the slope.",
+        "text": "Castlecrag's planned streets respond to the terrain rather than imposing a simple grid. I exaggerated those curves into a broad spiral. The drawing asks your eye to move with the hillside instead of cutting across it."
+      },
+      {
+        "label": "The low houses embedded in the bands.",
+        "text": "The Griffins sought architecture that belonged within its natural setting. I kept the roofs close to the ground and repeated their modest scale. You can still read the shape of the land above and between them."
+      },
+      {
+        "label": "The sandstone strips.",
+        "text": "Local stone was important to the Griffins' architecture and landscape vision. I exposed warm bands between the roads and homes. The neighbourhood appears assembled from its own terrain, with the rock continuing through the design."
+      },
+      {
+        "label": "The trees rising above the roofs.",
+        "text": "I gave the canopy the vertical presence that a city drawing usually assigns to towers. Trees become the skyline. Their height helps explain why the scale of buildings matters so much to the composition."
+      },
+      {
+        "label": "The paths and people between the rings.",
+        "text": "Castlecrag's reserve network links homes through shared green spaces. I filled those connections with small walkers. Community becomes a pattern of possible encounters, built into the spaces between private houses."
+      },
+      {
+        "label": "The amphitheatre at the centre.",
+        "text": "The Haven Amphitheatre expresses the Griffins' interest in communal cultural life, particularly Marion's enthusiasm for performance. I made the gathering place the heart of the spiral. The design leads towards an occasion people can share."
+      },
+      {
+        "label": "The water around the outer edge.",
+        "text": "Middle Harbour frames the peninsula and gives the winding ground its destination. I used blue sparingly, allowing it to appear between trees. The landscape keeps offering glimpses rather than one uninterrupted panorama."
+      },
+      {
+        "label": "The two tall slabs and red marker.",
+        "text": "A proposal for two residential towers at the former Quadrangle shops has prompted debate about height and heritage. I introduced two stark verticals into the low, curving composition. They make the question of scale immediately visible, while the red pin leaves it open for attention."
+      }
+    ],
+    "slogan": "Follow the land. Find one another."
+  },
+  "Chatswood": {
+    "title": "One arrival, many possible evenings",
+    "intro": "Come through the station with me and watch the neighbourhood split into possibilities. Dinner, a concert, a book, a shopping trip: Chatswood gathers them close together. I imagined its interchange as a prism, turning incoming journeys into coloured bands of local life.",
+    "items": [
+      {
+        "label": "The great transparent prism.",
+        "text": "I made the station the place where several routes meet and change direction. Its facets suggest that one arrival can lead to very different experiences. What Chatswood becomes depends partly on the door you take after the platform."
+      },
+      {
+        "label": "The railway, metro and buses entering together.",
+        "text": "Metro services reached Chatswood in 2019 and continued beneath the harbour in 2024. I kept different forms of transport as separate incoming lines. The neighbourhood's busy centre is sustained by connections extending well beyond it."
+      },
+      {
+        "label": "The food stalls along the upper band.",
+        "text": "Chatswood's markets and Asian dining give people reasons to linger after their journey. I drew rising steam and small queues above the station. An abstract transport line becomes the very specific question of what smells good."
+      },
+      {
+        "label": "The shopping buildings in the middle.",
+        "text": "The large retail centres occupy a strong place in Chatswood's commercial landscape. I kept them broad and solid, then put people between them. Their scale is most meaningful at the level of a pavement and a shared errand."
+      },
+      {
+        "label": "The concert hall opened like a golden shell.",
+        "text": "The Concourse opened in 2011. I cut its performance space open so you can see musicians and audience together. The warm interior becomes another destination carried out of the station's prism."
+      },
+      {
+        "label": "The library beneath the performance space.",
+        "text": "Chatswood Library is part of The Concourse. I placed books and readers in clear view, giving quiet concentration as much space as the spectacle above. A cultural centre holds many different volumes of human activity."
+      },
+      {
+        "label": "The red band with lanterns and a lion dance.",
+        "text": "Chatswood's Lunar New Year celebrations bring performance and gathering into the streets. I let the festive route stream out beyond the building. Culture fills the public space between institutions as well as their interiors."
+      },
+      {
+        "label": "The towers rising at the far end.",
+        "text": "Homes and offices extend the centre upwards. I left some upper edges lightly drawn, allowing the skyline to feel unfinished. The prism keeps receiving new arrivals, and the neighbourhood keeps finding places for them."
+      }
+    ],
+    "slogan": "Step off the train. Into possibility."
+  },
+  "Chiswick": {
+    "title": "Unwinding a waterfront from a spool",
+    "intro": "At first this looks like a giant reel of cable. Look inside it with me and you will find workers, machinery and the beginnings of today's waterfront. Chiswick's Sydney Wiremill inspired the drawing: I imagined the residential shoreline being unwound from the material once made here.",
+    "items": [
+      {
+        "label": "The enormous wooden reels.",
+        "text": "Lysaght Brothers established the Sydney Wiremill at Chiswick in 1884; it later became part of BHP. I gave the spools the scale of buildings. The former industry's everyday object becomes the structure of the suburb's portrait."
+      },
+      {
+        "label": "The factory rooms inside the drum.",
+        "text": "I opened the reel into several working floors. The spaces hold machines and people rather than an empty industrial silhouette. Chiswick's transformation includes the disappearance of a workplace where many individual lives were spent."
+      },
+      {
+        "label": "The men tending the machinery.",
+        "text": "Photographer Michael Mangold documented and interviewed wiremill workers before its closure. That attention to working lives matters to this image. I made the figures legible inside the great object, so that the machinery would not erase them."
+      },
+      {
+        "label": "The different layers wound around the reel.",
+        "text": "Silver wire, pale paper and warm copper-like bands give the drum a material history. I let those layers sit tightly together, like accumulated periods of production. Unwinding the suburb means encountering more than one surface."
+      },
+      {
+        "label": "The old river scene entering from the left.",
+        "text": "The faint houses and small boat recall the shoreline before its present density. I left them nearly monochrome. They enter the reel as another layer, rather than becoming an idyllic world outside history."
+      },
+      {
+        "label": "The apartments emerging on the right.",
+        "text": "The wiremill site was redeveloped for housing. I made the new buildings rise from the unrolled strip, keeping a physical connection to what preceded them. A new address occupies the end of an older working process."
+      },
+      {
+        "label": "The foreshore path and trees.",
+        "text": "The emerging strip becomes somewhere to walk beside the water. I added people at this smaller scale so that the change could be understood through use: a place once defined by production becomes part of someone's route home."
+      },
+      {
+        "label": "The ferry pulling the line onwards.",
+        "text": "Chiswick's wharf connects the peninsula to the wider river. I let the ferry draw a loose thread out of the composition. The old reel has stopped manufacturing, but the neighbourhood is still connected to lives elsewhere."
+      }
+    ],
+    "slogan": "A working past, still part of the thread."
+  },
+  "Clovelly": {
+    "title": "An eye opening beneath the water",
+    "intro": "Bring your mask and look down with me. Clovelly's narrow bay, concrete edges and underwater life suggested an enormous eye. I placed a blue groper at its centre, making the creature we hope to glimpse the focus of the whole neighbourhood.",
+    "items": [
+      {
+        "label": "The bay shaped like an eye.",
+        "text": "Clovelly is a narrow inlet rather than a broad stretch of open surf. I exaggerated its enclosing shape into an eye. The image asks you to change your direction of attention, from the horizon to what lives beneath the surface."
+      },
+      {
+        "label": "The giant blue groper.",
+        "text": "Blue gropers are closely associated with snorkelling at Clovelly. I enlarged one until it became the picture's central presence. For a moment, the familiar human scale of the beach gives way to that of another inhabitant."
+      },
+      {
+        "label": "The red ring around the fish.",
+        "text": "I drew a thin circle of attention rather than a physical enclosure. It marks the space the creature needs within our enjoyment of the bay. Looking closely also means noticing that we are visitors to somebody else's habitat."
+      },
+      {
+        "label": "The underwater garden of rock and weed.",
+        "text": "Clovelly supports varied marine life. I opened the clear water to reveal a dense seabed, letting small forms gather around the fish. The blue surface becomes a living interior instead of an empty swimming lane."
+      },
+      {
+        "label": "The snorkellers at the edge of the centre.",
+        "text": "I made the people small and horizontal, absorbed in looking. Their movement is gentle within the composition. The encounter becomes interesting because attention travels both ways across the water."
+      },
+      {
+        "label": "The concrete promenades and ladders.",
+        "text": "Clovelly's promenades were developed in the early twentieth century. I treated them as the eye's firm outline. Human construction makes a place to sit and enter the water while giving this beach its distinctive geometry."
+      },
+      {
+        "label": "The little sandy end.",
+        "text": "The sand occupies only a small part of the composition. I kept children and resting figures there to show another pace of beach life. You can belong to the afternoon without swimming out to its centre."
+      },
+      {
+        "label": "The rocks opening towards the ocean.",
+        "text": "Beyond the carefully framed inlet, the sea remains open. I let the waves continue off the page. The bay may feel like a room, but its water and inhabitants are part of something much larger."
+      }
+    ],
+    "slogan": "Look closer. A whole world is swimming here."
+  },
+  "Concord": {
+    "title": "Listening beneath the familiar street",
+    "intro": "Let me place a stethoscope against this apparently quiet neighbourhood. Concord's cafés, sporting grounds and waterfront sit among histories of labour, industry and care. I wanted the drawing to listen below the pleasant surface, where earlier lives still help explain the rhythm of the place.",
+    "items": [
+      {
+        "label": "The stethoscope enclosing the landscape.",
+        "text": "Concord and neighbouring Concord West have a strong history of hospitals and convalescent care. I enlarged the instrument to hear a whole district. It connects medical attention with the more ordinary work of noticing what sustains a neighbourhood."
+      },
+      {
+        "label": "The grand house and hospital buildings.",
+        "text": "The Walker family's Yaralla estate in Concord West became associated with health care through philanthropy. I brought that history beside the hospital forms. Wealth once expressed through a private estate could also become a resource for other people's recovery."
+      },
+      {
+        "label": "The oval inside the listening piece.",
+        "text": "Sport gives Concord's open grounds a repeated communal rhythm. I put the game inside the stethoscope's head, making play part of what the instrument detects. Health appears as activity and company as well as treatment."
+      },
+      {
+        "label": "The workers beneath the grass.",
+        "text": "Longbottom Stockade occupied ground around today's Concord Oval and nearby parks. I opened a lower historical layer showing labour. A familiar recreational landscape can carry a past that would otherwise be difficult to see."
+      },
+      {
+        "label": "The red pulse along the shopping street.",
+        "text": "Majors Bay Road is a centre of Concord's dining and everyday services. I ran a heartbeat beneath its café tables and shopfronts. Their significance lies in repeated visits, recognised faces and the small transactions that keep a village centre active."
+      },
+      {
+        "label": "The factory and tall chimney.",
+        "text": "Concord's industrial history includes the Bushells factory on Burwood Road, developed from the 1950s. I used a brick factory silhouette to keep work within the neighbourhood's portrait. The industrial chapter belongs beside the cafés that now shape many first impressions."
+      },
+      {
+        "label": "The houses carried along the blue tube.",
+        "text": "I bent the stethoscope's tubing into a shoreline lined with homes. The river becomes a continuous connection among otherwise separate addresses. Each house faces the same moving water from a slightly different position."
+      },
+      {
+        "label": "The mangroves, small boats and distant stops.",
+        "text": "The upper edge makes room for the estuarine landscape and the journeys around it. I wanted the composition to end in circulation: people arriving, water moving, and a neighbourhood whose quietness still contains many forms of life."
+      }
+    ],
+    "slogan": "A familiar street with a deeper pulse."
   }
 };
 
@@ -1517,6 +2609,7 @@ let resumeDrawing=null,lastPrepared=null;
 
 async function choose(name){
   if(!Object.prototype.hasOwnProperty.call(ART,name))return;
+  selectProjectTab('draw');
   current=name;qEl.value=name;closeSuggestions();
   const src=ART[name];noteEl.textContent='';renderStory(name);
   if (innerWidth<=860) sheet.scrollIntoView({behavior: reduced?'auto':'smooth', block:'start'});
@@ -1724,7 +2817,6 @@ addEventListener('pagehide',()=>drawingSound.silence(true));
 /* ---------- project tabs ---------- */
 const projectTabs=[document.getElementById('tab-draw'),document.getElementById('tab-about')];
 const aboutPanel=document.getElementById('about');
-const searchControls=document.querySelector('.search-controls');
 const viewScroll={draw:0,about:0};
 function selectProjectTab(view){
   if(!['draw','about'].includes(view)||view===activeProjectView)return;
@@ -1732,7 +2824,7 @@ function selectProjectTab(view){
   activeProjectView=view;
   closeSuggestions();
   const drawing=view==='draw';
-  studioEl.hidden=!drawing;aboutPanel.hidden=drawing;searchControls.hidden=!drawing;
+  studioEl.hidden=!drawing;aboutPanel.hidden=drawing;
   projectTabs.forEach(tab=>{
     const selected=tab.dataset.view===view;
     tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;
