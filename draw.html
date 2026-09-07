@@ -59,12 +59,11 @@
   .thread .knot{fill:var(--thread);opacity:0;transition:opacity .3s}
 
   .foot{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:baseline;justify-content:space-between;color:var(--graphite);font-size:14px;min-height:22px}
-  .foot .stage{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:17px;color:var(--ink)}
-  .foot .stage:empty{display:none}
   .actions{display:flex;gap:18px}
-  .actions button{border:0;background:none;font:inherit;font-size:14px;color:var(--ink);padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--rule)}
-  .actions button:hover{text-decoration-color:var(--ink)}
-  .actions button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  .foot button{border:0;background:none;font:inherit;font-size:14px;color:var(--ink);padding:8px 0;cursor:pointer;text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--rule)}
+  .foot button:hover{text-decoration-color:var(--ink)}
+  .foot button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+  .foot button:disabled{cursor:default;color:var(--graphite)}
   .actions[hidden]{display:none}
   .note{color:var(--graphite);font-size:13px}
 
@@ -94,7 +93,7 @@
       </svg>
     </div>
     <div class="foot">
-      <div class="stage" id="stage" aria-live="polite"></div>
+      <button id="sound" type="button" aria-label="Drawing sound" aria-pressed="false">Enable sound</button>
       <div class="actions" id="actions" hidden>
         <button id="again">Draw it again</button>
         <button id="save">Save as PNG</button>
@@ -533,7 +532,6 @@ const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
 const sheet = document.getElementById('sheet');
 const promptEl = document.getElementById('prompt');
-const stageEl = document.getElementById('stage');
 const actionsEl = document.getElementById('actions');
 const noteEl = document.getElementById('note');
 const stitch = document.getElementById('stitch');
@@ -541,6 +539,81 @@ const knot = document.getElementById('knot');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let W=0,H=0, raf=0, job=0;
+
+/* Quiet paper textures, made locally. Audio starts only after Enable sound. */
+class DrawingSound {
+  constructor(){
+    this.context=null; this.enabled=false; this.previous=null;
+    this.profiles={
+      sketch:{frequency:1900,cutoff:6500,level:0.14},
+      line:{frequency:2700,cutoff:7200,level:0.10},
+      marker:{frequency:850,cutoff:3100,level:0.20},
+      eraser:{frequency:420,cutoff:1900,level:0.25},
+      pen:{frequency:2300,cutoff:6000,level:0.11}
+    };
+  }
+  async enable(){
+    const Context=globalThis.AudioContext||globalThis.webkitAudioContext;
+    if(!Context)return false;
+    try {
+      if(!this.context){
+        const context=new Context(); this.context=context;
+        const buffer=context.createBuffer(1,context.sampleRate*3,context.sampleRate);
+        const samples=buffer.getChannelData(0);
+        let seed=7391;
+        for(let i=0;i<samples.length;i++){
+          seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+          const time=i/context.sampleRate;
+          const grain=0.62+0.22*Math.sin(time*Math.PI*2*37)+0.12*Math.sin(time*Math.PI*2*83);
+          samples[i]=(seed/2147483648-1)*grain;
+        }
+        const source=context.createBufferSource();source.buffer=buffer;source.loop=true;
+        this.tone=context.createBiquadFilter();this.tone.type='bandpass';this.tone.Q.value=0.7;
+        this.softener=context.createBiquadFilter();this.softener.type='lowpass';this.softener.Q.value=0.5;
+        this.volume=context.createGain();this.volume.gain.value=0;
+        source.connect(this.tone);this.tone.connect(this.softener);this.softener.connect(this.volume);
+        if(context.createStereoPanner){
+          this.panner=context.createStereoPanner();this.volume.connect(this.panner);this.panner.connect(context.destination);
+        } else this.volume.connect(context.destination);
+        source.start();this.source=source;
+      }
+      await this.context.resume();
+      this.enabled=this.context.state==='running';
+      return this.enabled;
+    } catch(error){
+      this.enabled=false;this.silence();
+      const context=this.context;this.context=null;
+      if(context)context.close().catch(()=>{});
+      return false;
+    }
+  }
+  silence(){
+    this.previous=null;
+    if(!this.context||!this.volume)return;
+    const now=this.context.currentTime;
+    this.volume.gain.cancelScheduledValues(now);
+    this.volume.gain.setTargetAtTime(0,now,0.012);
+  }
+  disable(){this.enabled=false;this.silence();}
+  contact(kind,cursor,delta){
+    if(!this.enabled||!this.context||this.context.state!=='running'||document.hidden||!kind||cursor.lift||delta<=0){
+      this.silence();return;
+    }
+    const profile=this.profiles[kind];if(!profile){this.silence();return;}
+    const previous=this.previous;
+    const speed=previous&&previous.kind===kind?Math.hypot(cursor.x-previous.x,cursor.y-previous.y)/Math.max(delta,1/240)/W:0.5;
+    this.previous={x:cursor.x,y:cursor.y,kind};
+    const now=this.context.currentTime, level=profile.level*(0.4+0.6*Math.min(1,speed/2));
+    this.tone.frequency.setTargetAtTime(profile.frequency,now,0.025);
+    this.softener.frequency.setTargetAtTime(profile.cutoff,now,0.025);
+    if(this.panner)this.panner.pan.setTargetAtTime(Math.max(-0.35,Math.min(0.35,(cursor.x/W-0.5)*0.7)),now,0.03);
+    this.volume.gain.cancelScheduledValues(now);
+    this.volume.gain.setTargetAtTime(level,now,0.008);
+    // A missed frame must never leave a scratch playing indefinitely.
+    this.volume.gain.setTargetAtTime(0,now+0.08,0.025);
+  }
+}
+const drawingSound=new DrawingSound();
 
 function setSize(){
   // Keep the artwork and export sharp and stable when the viewport changes.
@@ -751,11 +824,11 @@ function buildLayers(img,animate=true){
 const GLYPHS = {"A":{w:0.7,s:[[[0,1],[0.35,0],[0.7,1]],[[0.13,0.62],[0.57,0.62]]]}, "B":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.082,0.005],[0.161,0.019],[0.233,0.042],[0.297,0.073],[0.349,0.111],[0.388,0.154],[0.412,0.201],[0.42,0.25],[0.412,0.299],[0.388,0.346],[0.349,0.389],[0.297,0.427],[0.233,0.458],[0.161,0.481],[0.082,0.495],[0,0.5]],[[0,0.48],[0.094,0.485],[0.184,0.5],[0.267,0.524],[0.339,0.556],[0.399,0.596],[0.443,0.641],[0.471,0.689],[0.48,0.74],[0.471,0.791],[0.443,0.839],[0.399,0.884],[0.339,0.924],[0.267,0.956],[0.184,0.98],[0.094,0.995],[0,1]]]}, "C":{w:0.64,s:[[[0.566,0.09],[0.479,0.028],[0.384,0.001],[0.286,0.011],[0.194,0.056],[0.114,0.135],[0.052,0.241],[0.013,0.365],[0,0.5],[0.013,0.635],[0.052,0.759],[0.114,0.865],[0.194,0.944],[0.286,0.989],[0.384,0.999],[0.479,0.972],[0.566,0.91]]]}, "D":{w:0.64,s:[[[0,0],[0,1]],[[0,0],[0.117,0.01],[0.23,0.038],[0.333,0.084],[0.424,0.146],[0.499,0.222],[0.554,0.309],[0.588,0.402],[0.6,0.5],[0.588,0.598],[0.554,0.691],[0.499,0.778],[0.424,0.854],[0.333,0.916],[0.23,0.962],[0.117,0.99],[0,1]]]}, "E":{w:0.56,s:[[[0.56,0],[0,0],[0,1],[0.56,1]],[[0,0.52],[0.44,0.52]]]}, "F":{w:0.55,s:[[[0.55,0],[0,0],[0,1]],[[0,0.52],[0.42,0.52]]]}, "G":{w:0.68,s:[[[0.555,0.067],[0.454,0.013],[0.346,0.001],[0.24,0.032],[0.145,0.103],[0.069,0.209],[0.02,0.339],[0,0.484],[0.013,0.629],[0.056,0.764],[0.126,0.876],[0.217,0.955],[0.322,0.996],[0.43,0.993],[0.534,0.948],[0.623,0.865],[0.69,0.75]],[[0.69,0.75],[0.69,0.53],[0.45,0.53]]]}, "H":{w:0.64,s:[[[0,0],[0,1]],[[0.64,0],[0.64,1]],[[0,0.52],[0.64,0.52]]]}, "I":{w:0.2,s:[[[0.1,0],[0.1,1]],[[0,0],[0.2,0]],[[0,1],[0.2,1]]]}, "J":{w:0.5,s:[[[0.44,0],[0.44,0.74]],[[0.44,0.74],[0.436,0.791],[0.423,0.839],[0.403,0.884],[0.376,0.924],[0.342,0.956],[0.304,0.98],[0.263,0.995],[0.22,1],[0.177,0.995],[0.136,0.98],[0.098,0.956],[0.064,0.924],[0.037,0.884],[0.017,0.839],[0.004,0.791],[0,0.74]]]}, "K":{w:0.62,s:[[[0,0],[0,1]],[[0.6,0],[0,0.56]],[[0.18,0.42],[0.6,1]]]}, "L":{w:0.54,s:[[[0,0],[0,1],[0.54,1]]]}, "M":{w:0.82,s:[[[0,1],[0,0],[0.41,0.7],[0.82,0],[0.82,1]]]}, "N":{w:0.7,s:[[[0,1],[0,0],[0.7,1],[0.7,0]]]}, "O":{w:0.74,s:[[[0.37,0],[0.512,0.038],[0.632,0.146],[0.712,0.309],[0.74,0.5],[0.712,0.691],[0.632,0.854],[0.512,0.962],[0.37,1],[0.228,0.962],[0.108,0.854],[0.028,0.691],[0,0.5],[0.028,0.309],[0.108,0.146],[0.228,0.038],[0.37,0]]]}, "P":{w:0.6,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]]]}, "Q":{w:0.76,s:[[[0.38,0],[0.525,0.038],[0.649,0.146],[0.731,0.309],[0.76,0.5],[0.731,0.691],[0.649,0.854],[0.525,0.962],[0.38,1],[0.235,0.962],[0.111,0.854],[0.029,0.691],[0,0.5],[0.029,0.309],[0.111,0.146],[0.235,0.038],[0.38,0]],[[0.48,0.7],[0.8,1.06]]]}, "R":{w:0.62,s:[[[0,1],[0,0]],[[0,0],[0.086,0.005],[0.168,0.02],[0.244,0.044],[0.311,0.076],[0.366,0.116],[0.407,0.161],[0.432,0.209],[0.44,0.26],[0.432,0.311],[0.407,0.359],[0.366,0.404],[0.311,0.444],[0.244,0.476],[0.168,0.5],[0.086,0.515],[0,0.52]],[[0.3,0.52],[0.62,1]]]}, "S":{w:0.58,s:[[[0.44,0.036],[0.39,0.014],[0.337,0.002],[0.282,0.001],[0.228,0.009],[0.176,0.028],[0.13,0.056],[0.089,0.092],[0.058,0.135],[0.035,0.183],[0.022,0.235],[0.021,0.288],[0.03,0.34],[0.049,0.389],[0.078,0.434],[0.115,0.473],[0.43,0.478],[0.485,0.516],[0.529,0.564],[0.561,0.621],[0.577,0.683],[0.579,0.747],[0.564,0.81],[0.535,0.868],[0.492,0.918],[0.438,0.958],[0.376,0.985],[0.309,0.999],[0.241,0.998],[0.174,0.982],[0.113,0.953],[0.061,0.911],[0.02,0.86]]]}, "T":{w:0.6,s:[[[0,0],[0.6,0]],[[0.3,0],[0.3,1]]]}, "U":{w:0.66,s:[[[0,0],[0,0.72],[0,0.72],[0.006,0.775],[0.025,0.827],[0.056,0.876],[0.097,0.918],[0.147,0.953],[0.204,0.979],[0.266,0.995],[0.33,1],[0.394,0.995],[0.456,0.979],[0.513,0.953],[0.563,0.918],[0.604,0.876],[0.635,0.827],[0.654,0.775],[0.66,0.72],[0.66,0.72],[0.66,0]]]}, "V":{w:0.66,s:[[[0,0],[0.33,1],[0.66,0]]]}, "W":{w:0.94,s:[[[0,0],[0.235,1],[0.47,0.28],[0.705,1],[0.94,0]]]}, "X":{w:0.64,s:[[[0,0],[0.64,1]],[[0.64,0],[0,1]]]}, "Y":{w:0.64,s:[[[0,0],[0.32,0.54],[0.64,0]],[[0.32,0.54],[0.32,1]]]}, "Z":{w:0.6,s:[[[0,0],[0.6,0],[0,1],[0.6,1]]]}};
 
 const PHASES = [ // seconds
-  {key:'sketch',  dur:6,   label:'Rough sketch'},
-  {key:'gag',     dur:6,   label:'Hmm… no.'},
-  {key:'line',    dur:8.5, label:'Fineliner details'},
-  {key:'marker',  dur:18,  label:'Markers, one pen at a time'},
-  {key:'sign',    dur:3.0, label:''}
+  {key:'sketch',  dur:6},
+  {key:'gag',     dur:6},
+  {key:'line',    dur:8.5},
+  {key:'marker',  dur:18},
+  {key:'sign',    dur:3.0}
 ];
 let resumeDrawing=null;
 
@@ -769,17 +842,18 @@ async function choose(name){
 
 async function draw(name, src){
   const myJob=++job; cancelAnimationFrame(raf); resumeDrawing=null;
+  drawingSound.silence();
   actionsEl.hidden=true; document.getElementById('save').hidden=false;
   document.getElementById('again').textContent='Draw it again';
   knot.style.opacity=0; setStitch(0);
-  promptEl.classList.add('hide'); stageEl.textContent=`Preparing ${name}…`;
+  promptEl.classList.add('hide');
   setSize();
   const S=W/1000;
   let layers;
   try {
     const img=await loadImage(src);
     if(myJob!==job)return;
-    // Let the loading label paint before tracing cached images, too.
+    // Let the selection paint before tracing cached images, too.
     await new Promise(resolve=>setTimeout(resolve,0));
     if(myJob!==job)return;
     layers=buildLayers(img,!reduced);
@@ -787,7 +861,7 @@ async function draw(name, src){
     if(myJob!==job)return;
     ctx.clearRect(0,0,W,H);
     promptEl.querySelector('span').textContent=`Couldn't load ${name}. Please try again.`;
-    promptEl.classList.remove('hide'); stageEl.textContent='';
+    promptEl.classList.remove('hide');
     actionsEl.hidden=false; document.getElementById('save').hidden=true;
     document.getElementById('again').textContent='Try again';
     return;
@@ -872,7 +946,7 @@ async function draw(name, src){
   const pencilState=strokeState(layers.pencil), lineState=strokeState(layers.fineliner), markerState=strokeState(layers.marker);
   const phases=PHASES.filter(phase=>phase.key!=='gag'||doodle);
   const total=phases.reduce((sum,phase)=>sum+phase.dur,0);
-  let phaseIdx=0, phaseElapsed=0, elapsed=0, lastFrame=null, lastLabel='';
+  let phaseIdx=0, phaseElapsed=0, elapsed=0, lastFrame=null;
   let lineProgress=0, settle=0;
   const pace=t=>0.6*t+0.4*t*t*(3-2*t);
   function drawTool(kind){
@@ -931,6 +1005,7 @@ async function draw(name, src){
   }
   function frame(now){
     if(myJob!==job||document.hidden)return;
+    let soundKind=null;
     const delta=lastFrame===null?0:Math.max(0,(now-lastFrame)/1000);
     lastFrame=now; elapsed+=delta; phaseElapsed+=delta;
     // Carry elapsed time across phases and finish each route even after a
@@ -943,43 +1018,59 @@ async function draw(name, src){
       ctx.drawImage(layers.base,0,0); sign(1); resumeDrawing=null; finish(); return;
     }
     const phase=phases[phaseIdx], t=Math.min(1,phaseElapsed/phase.dur);
-    if(lastLabel!==phase.key){stageEl.textContent=phase.label;lastLabel=phase.key;}
     setStitch(Math.min(1,elapsed/total));
     if(phase.key==='sketch'){
       paintStrokes(pencilState,pc,pace(t),cursor); compose(); drawTool('sketch');
+      soundKind='sketch';
     } else if(phase.key==='line'){
       lineProgress=pace(t);paintStrokes(lineState,lc,lineProgress,cursor);compose();drawTool('line');
+      soundKind='line';
     } else if(phase.key==='marker'){
       paintStrokes(markerState,im,Math.min(1,t/0.94),cursor);
       settle=Math.max(0,(t-0.92)/0.08);settle=settle*settle*(3-2*settle);
-      tip=cursor.ink;compose();if(t<0.94)drawTool('marker');
+      tip=cursor.ink;compose();if(t<0.94){drawTool('marker');soundKind='marker';}
     } else if(phase.key==='gag'){
       cursor.lift=false;
-      if(t<0.55){const q=t/0.55;drawDoodleTo(doodle.total*(q*q*(3-2*q)));compose();drawTool('sketch');}
+      if(t<0.55){const q=t/0.55;drawDoodleTo(doodle.total*(q*q*(3-2*q)));compose();drawTool('sketch');soundKind='sketch';}
       else if(t<0.66){compose();cursor.lift=true;drawTool('sketch');}
-      else{erase((t-0.66)/0.34);compose();drawTool('eraser');}
+      else{erase((t-0.66)/0.34);compose();drawTool('eraser');soundKind='eraser';}
     } else if(phase.key==='sign'){
       ctx.drawImage(layers.base,0,0);
       const pen=sign(t);
-      if(pen){cursor.x=pen.x;cursor.y=pen.y;cursor.lift=false;drawTool('pen');}
+      if(pen){cursor.x=pen.x;cursor.y=pen.y;cursor.lift=false;drawTool('pen');soundKind='pen';}
     }
+    drawingSound.contact(soundKind,cursor,delta);
     raf=requestAnimationFrame(frame);
   }
   resumeDrawing=()=>{if(myJob!==job)return;lastFrame=null;cancelAnimationFrame(raf);raf=requestAnimationFrame(frame);};
   if(!document.hidden)resumeDrawing();
 }
-function finish(){ stageEl.textContent=''; actionsEl.hidden=false; knot.style.opacity=1; setStitch(1); }
+function finish(){ drawingSound.silence(); actionsEl.hidden=false; knot.style.opacity=1; setStitch(1); }
 
 function setStitch(p){ const x=Math.round(p*1000); stitch.setAttribute('d',`M0 7 L${x} 7`); knot.setAttribute('cx',x); }
 
 document.getElementById('again').addEventListener('click',()=>{ if(current) choose(current); });
+const soundButton=document.getElementById('sound');
+soundButton.addEventListener('click',async()=>{
+  if(drawingSound.enabled){
+    drawingSound.disable();soundButton.textContent='Enable sound';soundButton.setAttribute('aria-pressed','false');return;
+  }
+  soundButton.disabled=true;
+  const enabled=await drawingSound.enable();
+  soundButton.disabled=false;
+  soundButton.textContent=enabled?'Mute sound':'Enable sound';
+  soundButton.setAttribute('aria-pressed',String(enabled));
+  soundButton.title=enabled?'':'Sound could not start. Click to try again.';
+  if(enabled&&current&&!reduced)choose(current);
+});
 document.getElementById('save').addEventListener('click',()=>{
   const a=document.createElement('a'); a.download=`${current.replace(/\s+/g,'-').toLowerCase()}-drawn.png`; a.href=cv.toDataURL('image/png'); a.click();
 });
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden)cancelAnimationFrame(raf);
+  if(document.hidden){cancelAnimationFrame(raf);drawingSound.silence();}
   else if(resumeDrawing)resumeDrawing();
 });
+addEventListener('pagehide',()=>drawingSound.silence());
 
 /* open with art, not a blank sheet: auto-draw one suburb on load */
 choose(DEMO);
